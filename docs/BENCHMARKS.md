@@ -22,13 +22,13 @@ python -m src.benchmark --crawl-pages 10 --crawl-delay 0
 
 Notes:
 
-- The default benchmark crawl uses `--crawl-delay 0` to measure crawler overhead rather than enforced politeness waiting.
-- For real crawling behavior, the application itself still defaults to a 6-second politeness window.
+- The default benchmark crawl uses the same 6-second politeness window as the main crawler commands.
+- Use `--crawl-delay 0` only when you explicitly want to measure crawler overhead without waiting time.
 - Results vary by machine, Python version, network conditions, and whether the saved index is already present.
 
 ## Sample Results
 
-Sample run captured on the coursework development machine with Python 3.11 and the current `data/index.json`:
+Sample run captured on the coursework development machine with Python 3.11 and the current `data/index.json`, using `--crawl-delay 0` to isolate crawler overhead:
 
 | Metric | Value | Notes |
 | --- | --- | --- |
