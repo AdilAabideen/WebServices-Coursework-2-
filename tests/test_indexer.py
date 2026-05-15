@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from src.indexer import Document, build_inverted_index, tokenize
+from src.indexer import Document, build_inverted_index, page_to_document, tokenize
+from src.models import PageContent, Quote
 
 
 def test_case_insensitive_tokenisation() -> None:
@@ -54,3 +55,27 @@ def test_empty_text_handling() -> None:
     assert index.document_count == 1
     assert index.term_count == 0
     assert index.documents["doc-1"]["token_count"] == 0
+
+
+def test_page_to_document_preserves_quote_metadata() -> None:
+    page = PageContent(
+        url="https://quotes.toscrape.com/page/2/",
+        quotes=[
+            Quote(
+                text="Good friends, good books, and a sleepy conscience: this is the ideal life.",
+                author="Mark Twain",
+                tags=["books", "contentment", "friends", "friendship", "life"],
+            )
+        ],
+        next_page=None,
+    )
+
+    document = page_to_document(page)
+
+    assert document.metadata["quotes"] == [
+        {
+            "text": "Good friends, good books, and a sleepy conscience: this is the ideal life.",
+            "author": "Mark Twain",
+            "tags": ["books", "contentment", "friends", "friendship", "life"],
+        }
+    ]

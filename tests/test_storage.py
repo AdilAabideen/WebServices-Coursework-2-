@@ -13,7 +13,20 @@ from src.storage import IndexStorageError, load_index, save_index
 def build_sample_index():
     return build_inverted_index(
         [
-            Document(document_id="doc-1", text="alpha beta alpha", metadata={"url": "a"}),
+            Document(
+                document_id="doc-1",
+                text="alpha beta alpha",
+                metadata={
+                    "url": "a",
+                    "quotes": [
+                        {
+                            "text": "Alpha beta alpha",
+                            "author": "Author A",
+                            "tags": ["alpha", "beta"],
+                        }
+                    ],
+                },
+            ),
             Document(document_id="doc-2", text="gamma beta", metadata={"url": "b"}),
         ]
     )
@@ -36,6 +49,7 @@ def test_load_saved_json(tmp_path: Path) -> None:
     loaded = load_index(path)
 
     assert loaded.documents["doc-1"]["url"] == "a"
+    assert loaded.documents["doc-1"]["quotes"][0]["text"] == "Alpha beta alpha"
     assert loaded.terms["alpha"].postings["doc-1"].positions == [0, 2]
 
 

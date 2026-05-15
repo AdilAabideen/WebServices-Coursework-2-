@@ -16,6 +16,27 @@ class Quote:
     author: str
     tags: list[str]
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize quote metadata to a JSON-compatible dictionary."""
+        return {
+            "text": self.text,
+            "author": self.author,
+            "tags": self.tags,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> Quote:
+        """Create quote metadata from a JSON-compatible dictionary."""
+        validate_mapping_keys(payload, {"text", "author", "tags"}, "quote")
+        raw_tags = payload["tags"]
+        if not isinstance(raw_tags, list):
+            raise IndexValidationError("Invalid index structure: quote tags must be a list.")
+        return cls(
+            text=str(payload["text"]),
+            author=str(payload["author"]),
+            tags=[str(tag) for tag in raw_tags],
+        )
+
 
 @dataclass(frozen=True)
 class PageContent:
@@ -152,7 +173,7 @@ class RankedDocument:
     """A search match paired with a ranking score."""
 
     document_id: str
-    score: int
+    score: float
 
 
 def validate_mapping_keys(
@@ -175,4 +196,13 @@ def validate_document_metadata(metadata: Any, document_id: str) -> dict[str, Any
         raise IndexValidationError(
             f"Invalid index structure: document metadata for '{document_id}' must be an object."
         )
-    return {str(key): value for key, value in metadata.items()}
+
+    normalized = {str(key): value for key, value in metadata.items()}
+    if "quotes" in normalized:
+        raw_quotes = normalized["quotes"]
+        if not isinstance(raw_quotes, list):
+            raise IndexValidationError(
+                f"Invalid index structure: quotes metadata for '{document_id}' must be a list."
+            )
+        normalized["quotes"] = [Quote.from_dict(quote).to_dict() for quote in raw_quotes]
+    return normalized
