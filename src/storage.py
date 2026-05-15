@@ -5,11 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.indexer import InvertedIndex
-
-
-class IndexStorageError(Exception):
-    """Raised when index persistence or loading fails."""
+from src.exceptions import IndexStorageError
+from src.models import InvertedIndex
 
 
 def save_index(index: InvertedIndex, path: str | Path) -> None:
@@ -27,12 +24,24 @@ def load_index(path: str | Path) -> InvertedIndex:
     source = Path(path)
 
     if not source.exists():
-        raise IndexStorageError(f"Index file not found: {source}")
+        raise IndexStorageError(
+            f"Index file not found: {source}. Run `python -m src.main build` to create it."
+        )
 
     try:
         payload = json.loads(source.read_text(encoding="utf-8"))
         return InvertedIndex.from_dict(payload)
+    except IndexStorageError as exc:
+        raise IndexStorageError(
+            "Index file has invalid structure: "
+            f"{source}. Rebuild it with `python -m src.main build`."
+        ) from exc
     except json.JSONDecodeError as exc:
-        raise IndexStorageError(f"Index file is corrupt: {source}") from exc
+        raise IndexStorageError(
+            f"Index file is corrupt: {source}. Rebuild it with `python -m src.main build`."
+        ) from exc
     except (KeyError, TypeError, ValueError) as exc:
-        raise IndexStorageError(f"Index file has invalid structure: {source}") from exc
+        raise IndexStorageError(
+            "Index file has invalid structure: "
+            f"{source}. Rebuild it with `python -m src.main build`."
+        ) from exc

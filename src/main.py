@@ -3,23 +3,24 @@
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
+from typing import NoReturn
 
+from src.config import DEFAULT_DELAY_SECONDS, DEFAULT_INDEX_PATH, DEFAULT_START_URL
 from src.crawler import Crawler
+from src.exceptions import CliUsageError, IndexStorageError, ProjectError
 from src.indexer import build_index_from_pages
+from src.ranking import rank_documents
 from src.search import find_matching_documents, get_term_info, normalize_query_terms
-from src.storage import IndexStorageError, load_index, save_index
-
-
-DEFAULT_INDEX_PATH = Path("data/index.json")
+from src.storage import load_index, save_index
 
 
 class CliArgumentParser(argparse.ArgumentParser):
     """Argument parser that reports errors without exiting the process."""
 
-    def error(self, message: str) -> None:
-        raise ValueError(message)
+    def error(self, message: str) -> NoReturn:
+        """Raise a CLI usage error instead of exiting the interpreter."""
+        raise CliUsageError(message)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,13 +34,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     crawl_parser.add_argument(
         "--start-url",
-        default="https://quotes.toscrape.com/",
+        default=DEFAULT_START_URL,
         help="Starting URL for the crawl.",
     )
     crawl_parser.add_argument(
         "--delay",
         type=float,
-        default=6.0,
+        default=DEFAULT_DELAY_SECONDS,
         help="Minimum delay in seconds between requests.",
     )
     crawl_parser.add_argument(
@@ -55,13 +56,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_parser.add_argument(
         "--start-url",
-        default="https://quotes.toscrape.com/",
+        default=DEFAULT_START_URL,
         help="Starting URL for the crawl.",
     )
     build_parser.add_argument(
         "--delay",
         type=float,
-        default=6.0,
+        default=DEFAULT_DELAY_SECONDS,
         help="Minimum delay in seconds between requests.",
     )
     build_parser.add_argument(
@@ -221,11 +222,11 @@ def run_find(args: argparse.Namespace) -> int:
         return 0
 
     print(f'Results for query: "{" ".join(normalized_terms)}"')
-    for document_id in matches:
-        metadata = index.documents.get(document_id, {})
-        url = metadata.get("url", document_id)
+    for result in rank_documents(index, matches, normalized_terms):
+        metadata = index.documents.get(result.document_id, {})
+        url = metadata.get("url", result.document_id)
         quote_count = metadata.get("quote_count", "unknown")
-        print(f"- {url} | quotes={quote_count}")
+        print(f"- {url} | quotes={quote_count} | score={result.score}")
     return 0
 
 
@@ -234,9 +235,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
-    except ValueError as exc:
+    except CliUsageError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         parser.print_help(sys.stderr)
+        return 1
+    except ProjectError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
         return 1
 
     if args.command == "crawl":

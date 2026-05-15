@@ -2,113 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import re
 from typing import Any, Iterable
 
-from src.crawler import PageContent
+from src.config import TOKEN_PATTERN
+from src.exceptions import DuplicateDocumentError
+from src.models import Document, InvertedIndex, PageContent, Posting, TermInfo
 
 
-TOKEN_PATTERN = re.compile(r"\w+", re.UNICODE)
-
-
-@dataclass(frozen=True)
-class Document:
-    """Indexable document payload."""
-
-    document_id: str
-    text: str
-    metadata: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class Posting:
-    """Per-document posting statistics for a term."""
-
-    frequency: int
-    positions: list[int]
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "frequency": self.frequency,
-            "positions": self.positions,
-        }
-
-    @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> Posting:
-        return cls(
-            frequency=int(payload["frequency"]),
-            positions=[int(position) for position in payload["positions"]],
-        )
-
-
-@dataclass(frozen=True)
-class TermInfo:
-    """Aggregate statistics and postings for a term."""
-
-    document_frequency: int
-    total_frequency: int
-    postings: dict[str, Posting]
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "document_frequency": self.document_frequency,
-            "total_frequency": self.total_frequency,
-            "postings": {
-                document_id: posting.to_dict()
-                for document_id, posting in self.postings.items()
-            },
-        }
-
-    @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> TermInfo:
-        return cls(
-            document_frequency=int(payload["document_frequency"]),
-            total_frequency=int(payload["total_frequency"]),
-            postings={
-                document_id: Posting.from_dict(posting)
-                for document_id, posting in payload["postings"].items()
-            },
-        )
-
-
-@dataclass(frozen=True)
-class InvertedIndex:
-    """Serializable inverted index with document metadata."""
-
-    documents: dict[str, dict[str, Any]]
-    terms: dict[str, TermInfo]
-
-    @property
-    def document_count(self) -> int:
-        return len(self.documents)
-
-    @property
-    def term_count(self) -> int:
-        return len(self.terms)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "documents": self.documents,
-            "terms": {
-                term: term_info.to_dict()
-                for term, term_info in self.terms.items()
-            },
-        }
-
-    @classmethod
-    def from_dict(cls, payload: dict[str, Any]) -> InvertedIndex:
-        documents = dict(payload["documents"])
-        terms = {
-            term: TermInfo.from_dict(term_payload)
-            for term, term_payload in payload["terms"].items()
-        }
-        return cls(documents=documents, terms=terms)
+TOKEN_REGEX = re.compile(TOKEN_PATTERN, re.UNICODE)
 
 
 def tokenize(text: str) -> list[str]:
     """Tokenize text into lowercase normalized terms."""
-    return TOKEN_PATTERN.findall(text.lower())
+    return TOKEN_REGEX.findall(text.lower())
 
 
 def build_inverted_index(documents: Iterable[Document]) -> InvertedIndex:
@@ -118,7 +25,9 @@ def build_inverted_index(documents: Iterable[Document]) -> InvertedIndex:
 
     for document in documents:
         if document.document_id in document_metadata:
-            raise ValueError(f"Duplicate document ID: {document.document_id}")
+            raise DuplicateDocumentError(
+                f"Duplicate document ID encountered while indexing: {document.document_id}"
+            )
 
         tokens = tokenize(document.text)
         document_metadata[document.document_id] = {
