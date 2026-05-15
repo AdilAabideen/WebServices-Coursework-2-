@@ -68,6 +68,7 @@ def page_to_document(page: PageContent) -> Document:
     """Convert a crawled page into an indexable document."""
     authors = sorted({quote.author for quote in page.quotes if quote.author})
     tags = sorted({tag for quote in page.quotes for tag in quote.tags})
+    serialized_quotes = [quote.to_dict() for quote in page.quotes]
     lines = [
         " ".join([quote.text, quote.author, *quote.tags]).strip()
         for quote in page.quotes
@@ -82,5 +83,6 @@ def page_to_document(page: PageContent) -> Document:
             "quote_count": len(page.quotes),
             "authors": authors,
             "tags": tags,
+            "quotes": serialized_quotes,
         },
     )
