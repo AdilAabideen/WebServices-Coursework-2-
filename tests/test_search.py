@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.indexer import Document, build_inverted_index
-from src.main import main
+from src.main import build_highlight_targets, highlight_terms, main
 from src.query_parser import parse_query
 from src.search import execute_query
 from src.storage import save_index
@@ -370,6 +370,76 @@ def test_find_missing_word_shows_suggestion_when_available(tmp_path: Path, capsy
     assert exit_code == 0
     assert 'No results found for query: "frends".' in captured.out
     assert 'Did you mean: "friends"?' in captured.out
+
+
+def test_highlight_terms_single_term() -> None:
+    highlighted = highlight_terms("Love is beautiful", ["love"], use_colour=False)
+
+    assert "[Love]" in highlighted
+
+
+def test_highlight_terms_is_case_insensitive() -> None:
+    highlighted = highlight_terms("Good friends", ["good"], use_colour=False)
+
+    assert "[Good]" in highlighted
+
+
+def test_highlight_terms_multi_word() -> None:
+    highlighted = highlight_terms(
+        "Good friends are good",
+        ["good", "friends"],
+        use_colour=False,
+    )
+
+    assert "[Good]" in highlighted
+    assert "[friends]" in highlighted
+
+
+def test_boolean_operator_is_not_highlighted() -> None:
+    query = parse_query("good OR friends")
+    highlighted = highlight_terms(
+        "Good friends are good",
+        build_highlight_targets(query),
+        use_colour=False,
+    )
+
+    assert "[Good]" in highlighted
+    assert "[friends]" in highlighted
+    assert "[OR]" not in highlighted
+
+
+def test_exclusion_term_is_not_highlighted() -> None:
+    query = parse_query("good -friends")
+    highlighted = highlight_terms(
+        "Good friends are good",
+        build_highlight_targets(query),
+        use_colour=False,
+    )
+
+    assert "[Good]" in highlighted
+    assert "[friends]" not in highlighted
+
+
+def test_metadata_filter_terms_are_not_highlighted() -> None:
+    query = parse_query("author:einstein")
+    highlighted = highlight_terms(
+        "Albert Einstein wrote about life",
+        build_highlight_targets(query),
+        use_colour=False,
+    )
+
+    assert highlighted == "Albert Einstein wrote about life"
+
+
+def test_phrase_query_prefers_phrase_highlighting() -> None:
+    query = parse_query('"good friends"')
+    highlighted = highlight_terms(
+        "Good friends, good books",
+        build_highlight_targets(query),
+        use_colour=False,
+    )
+
+    assert "[Good friends]" in highlighted
 
 
 def test_find_empty_query(tmp_path: Path, capsys) -> None:
