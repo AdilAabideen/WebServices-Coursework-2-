@@ -11,7 +11,12 @@ from src.crawler import Crawler
 from src.exceptions import CliUsageError, IndexStorageError, ProjectError
 from src.indexer import build_index_from_pages
 from src.ranking import rank_documents
-from src.search import find_matching_documents, get_term_info, normalize_query_terms
+from src.search import (
+    find_matching_documents,
+    find_matching_quotes,
+    get_term_info,
+    normalize_query_terms,
+)
 from src.storage import load_index, save_index
 
 
@@ -222,11 +227,17 @@ def run_find(args: argparse.Namespace) -> int:
         return 0
 
     print(f'Results for query: "{" ".join(normalized_terms)}"')
-    for result in rank_documents(index, matches, normalized_terms):
+    for rank, result in enumerate(rank_documents(index, matches, normalized_terms), start=1):
         metadata = index.documents.get(result.document_id, {})
         url = metadata.get("url", result.document_id)
         quote_count = metadata.get("quote_count", "unknown")
-        print(f"- {url} | quotes={quote_count} | score={result.score:.4f}")
+        print(f"{rank}. {url} | quotes={quote_count} | score={result.score:.4f}")
+
+        snippets = find_matching_quotes(metadata, normalized_terms)
+        for snippet in snippets:
+            print(f'   Match: "{snippet.text}"')
+            print(f"   Author: {snippet.author}")
+            print(f"   Tags: {', '.join(snippet.tags)}")
     return 0
 
 
