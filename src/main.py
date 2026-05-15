@@ -8,6 +8,7 @@ import sys
 
 from src.crawler import Crawler
 from src.indexer import build_index_from_pages
+from src.search import find_matching_documents, get_term_info, normalize_query_terms
 from src.storage import IndexStorageError, load_index, save_index
 
 
@@ -78,6 +79,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path to the JSON index file to load.",
     )
 
+    print_parser = subparsers.add_parser(
+        "print",
+        help="Print postings for a single indexed word.",
+    )
+    print_parser.add_argument(
+        "word",
+        nargs="?",
+        help="Word to inspect in the inverted index.",
+    )
+    print_parser.add_argument(
+        "--path",
+        default=str(DEFAULT_INDEX_PATH),
+        help="Path to the JSON index file to load.",
+    )
+
+    find_parser = subparsers.add_parser(
+        "find",
+        help="Find documents containing all terms in a query.",
+    )
+    find_parser.add_argument(
+        "query",
+        nargs="*",
+        help="One or more query terms.",
+    )
+    find_parser.add_argument(
+        "--path",
+        default=str(DEFAULT_INDEX_PATH),
+        help="Path to the JSON index file to load.",
+    )
+
     return parser
 
 
@@ -129,6 +160,68 @@ def run_load(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_print_term(args: argparse.Namespace) -> int:
+    """Print postings information for a single term."""
+    if not args.word:
+        print("Please provide a word to print.", file=sys.stderr)
+        return 1
+
+    try:
+        index = load_index(args.path)
+    except IndexStorageError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    normalized_terms = normalize_query_terms(args.word)
+    if not normalized_terms:
+        print("Please provide a non-empty word to print.", file=sys.stderr)
+        return 1
+
+    term = normalized_terms[0]
+    term_info = get_term_info(index, term)
+    if term_info is None:
+        print(f'No postings found for "{term}".')
+        return 0
+
+    print(f'Term: "{term}"')
+    print(f"Document frequency: {term_info.document_frequency}")
+    print(f"Total frequency: {term_info.total_frequency}")
+    for document_id in sorted(term_info.postings):
+        posting = term_info.postings[document_id]
+        print(
+            f"- {document_id} | frequency={posting.frequency} | positions={posting.positions}"
+        )
+    return 0
+
+
+def run_find(args: argparse.Namespace) -> int:
+    """Find documents containing all terms from a query."""
+    query = " ".join(args.query)
+    normalized_terms = normalize_query_terms(query)
+    if not normalized_terms:
+        print("Please provide a non-empty query.", file=sys.stderr)
+        return 1
+
+    try:
+        index = load_index(args.path)
+    except IndexStorageError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    matches = find_matching_documents(index, query)
+    if not matches:
+        print(f'No results found for query: "{" ".join(normalized_terms)}".')
+        return 0
+
+    print(f'Results for query: "{" ".join(normalized_terms)}"')
+    for document_id in matches:
+        metadata = index.documents.get(document_id, {})
+        url = metadata.get("url", document_id)
+        quote_count = metadata.get("quote_count", "unknown")
+        print(f"- {url} | quotes={quote_count}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the command-line entry point."""
     parser = build_parser()
@@ -140,6 +233,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_build(args)
     if args.command == "load":
         return run_load(args)
+    if args.command == "print":
+        return run_print_term(args)
+    if args.command == "find":
+        return run_find(args)
 
     parser.print_help()
     return 0
