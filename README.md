@@ -45,6 +45,14 @@ python -m src.main
 pytest
 ```
 
+## Continuous Integration
+
+GitHub Actions runs a CI workflow on pushes and pull requests. The pipeline:
+
+- installs project dependencies from `requirements.txt`
+- runs `python -m src.main`
+- runs `pytest`
+
 ## Next Steps
 
 - add application modules under `src/`
