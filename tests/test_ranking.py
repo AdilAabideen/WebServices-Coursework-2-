@@ -34,6 +34,12 @@ def test_rare_terms_get_higher_idf() -> None:
     assert inverse_document_frequency(index, "rare") > inverse_document_frequency(index, "common")
 
 
+def test_smoothed_idf_formula_is_used() -> None:
+    index = build_rank_index()
+
+    assert inverse_document_frequency(index, "rare") == 1.6931471805599454
+
+
 def test_documents_are_sorted_by_descending_score() -> None:
     index = build_rank_index()
 
@@ -49,3 +55,11 @@ def test_missing_terms_do_not_crash_ranker() -> None:
 
     assert [result.document_id for result in ranked] == ["doc-1", "doc-2"]
     assert all(result.score == 0.0 for result in ranked)
+
+
+def test_document_with_rare_term_can_beat_raw_frequency_only_order() -> None:
+    index = build_rank_index()
+
+    assert score_document(index, "doc-1", ["common", "rare"]) > score_document(
+        index, "doc-2", ["common", "rare"]
+    )

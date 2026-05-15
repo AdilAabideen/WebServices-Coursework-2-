@@ -15,17 +15,52 @@ def build_search_index(path: Path) -> None:
             Document(
                 document_id="doc-1",
                 text="Good friends show kindness and indifference fades.",
-                metadata={"url": "https://example.com/doc-1", "quote_count": 2},
+                metadata={
+                    "url": "https://quotes.toscrape.com/page/2/",
+                    "quote_count": 2,
+                    "quotes": [
+                        {
+                            "text": "Good friends, good books, and a sleepy conscience: this is the ideal life.",
+                            "author": "Mark Twain",
+                            "tags": ["books", "contentment", "friends", "friendship", "life"],
+                        },
+                        {
+                            "text": "Indifference and neglect often do much more damage than outright dislike.",
+                            "author": "J.K. Rowling",
+                            "tags": ["indifference", "opposite", "love"],
+                        },
+                    ],
+                },
             ),
             Document(
                 document_id="doc-2",
                 text="Good habits matter more than good intentions.",
-                metadata={"url": "https://example.com/doc-2", "quote_count": 1},
+                metadata={
+                    "url": "https://quotes.toscrape.com/page/5/",
+                    "quote_count": 1,
+                    "quotes": [
+                        {
+                            "text": "Good habits matter more than good intentions.",
+                            "author": "Example Author",
+                            "tags": ["habits", "good"],
+                        }
+                    ],
+                },
             ),
             Document(
                 document_id="doc-3",
                 text="Friends help in difficult times.",
-                metadata={"url": "https://example.com/doc-3", "quote_count": 3},
+                metadata={
+                    "url": "https://quotes.toscrape.com/page/8/",
+                    "quote_count": 3,
+                    "quotes": [
+                        {
+                            "text": "Friends help in difficult times.",
+                            "author": "Example Author Two",
+                            "tags": ["friends", "support"],
+                        }
+                    ],
+                },
             ),
         ]
     )
@@ -109,8 +144,9 @@ def test_find_single_word(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     assert 'Results for query: "indifference"' in captured.out
-    assert "https://example.com/doc-1" in captured.out
-    assert "https://example.com/doc-2" not in captured.out
+    assert "https://quotes.toscrape.com/page/2/" in captured.out
+    assert "Indifference and neglect often do much more damage than outright dislike." in captured.out
+    assert "https://quotes.toscrape.com/page/5/" not in captured.out
 
 
 def test_find_multi_word_query(tmp_path: Path, capsys) -> None:
@@ -122,9 +158,11 @@ def test_find_multi_word_query(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     assert 'Results for query: "good friends"' in captured.out
-    assert "https://example.com/doc-1" in captured.out
-    assert "https://example.com/doc-2" not in captured.out
-    assert "https://example.com/doc-3" not in captured.out
+    assert "https://quotes.toscrape.com/page/2/" in captured.out
+    assert "Good friends, good books, and a sleepy conscience: this is the ideal life." in captured.out
+    assert "Author: Mark Twain" in captured.out
+    assert "https://quotes.toscrape.com/page/5/" not in captured.out
+    assert "https://quotes.toscrape.com/page/8/" not in captured.out
 
 
 def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> None:
@@ -136,7 +174,7 @@ def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> Non
 
     assert exit_code == 0
     assert 'Results for query: "good friends"' in captured.out
-    assert "https://example.com/doc-1" in captured.out
+    assert "https://quotes.toscrape.com/page/2/" in captured.out
 
 
 def test_find_single_term_results_are_ranked(tmp_path: Path, capsys) -> None:
@@ -148,9 +186,30 @@ def test_find_single_term_results_are_ranked(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 0
     assert "score=" in captured.out
-    assert captured.out.index("https://example.com/doc-2") < captured.out.index(
-        "https://example.com/doc-1"
+    assert captured.out.index("https://quotes.toscrape.com/page/5/") < captured.out.index(
+        "https://quotes.toscrape.com/page/2/"
     )
+
+
+def test_find_missing_quote_metadata_does_not_crash_output(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    index = build_inverted_index(
+        [
+            Document(
+                document_id="doc-1",
+                text="love friendship",
+                metadata={"url": "https://quotes.toscrape.com/page/2/", "quote_count": 1},
+            )
+        ]
+    )
+    save_index(index, path)
+
+    exit_code = main(["find", "love", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "https://quotes.toscrape.com/page/2/" in captured.out
+    assert "score=" in captured.out
 
 
 def test_find_missing_word(tmp_path: Path, capsys) -> None:
