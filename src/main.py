@@ -6,10 +6,16 @@ import argparse
 import sys
 from typing import NoReturn
 
-from src.config import DEFAULT_DELAY_SECONDS, DEFAULT_INDEX_PATH, DEFAULT_START_URL
+from src.config import (
+    DEFAULT_DELAY_SECONDS,
+    DEFAULT_INDEX_PATH,
+    DEFAULT_START_URL,
+    MAX_SNIPPET_LENGTH,
+)
 from src.crawler import Crawler
 from src.exceptions import CliUsageError, IndexStorageError, ProjectError, QuerySyntaxError
 from src.indexer import build_index_from_pages
+from src.models import InvertedIndex, RankedDocument
 from src.query_parser import parse_query
 from src.ranking import rank_documents
 from src.search import (
@@ -230,16 +236,18 @@ def run_find(args: argparse.Namespace) -> int:
         return 0
 
     ranking_terms = parsed_query.scoring_terms()
+    ranked_results = build_find_results(index, matches, ranking_terms)
     print(f"Results for query: {rendered_query}")
-    for rank, result in enumerate(rank_documents(index, matches, ranking_terms), start=1):
+    for rank, result in enumerate(ranked_results, start=1):
         metadata = index.documents.get(result.document_id, {})
         url = metadata.get("url", result.document_id)
         quote_count = metadata.get("quote_count", "unknown")
-        print(f"{rank}. {url} | quotes={quote_count} | score={result.score:.4f}")
+        relevance = format_relevance_label(result.score, has_term_ranking=bool(ranking_terms))
+        print(f"{rank}. {url} | quotes={quote_count} | {relevance}")
 
         snippets = find_matching_quotes(metadata, parsed_query)
         for snippet in snippets:
-            print(f'   Match: "{snippet.text}"')
+            print(f'   Match: "{truncate_snippet(snippet.text)}"')
             print(f"   Author: {snippet.author}")
             print(f"   Tags: {', '.join(snippet.tags)}")
     return 0
@@ -265,6 +273,35 @@ def render_query_for_output(query_text: str) -> str:
     if query_text.startswith('"') and query_text.endswith('"'):
         return query_text
     return f'"{query_text}"'
+
+
+def build_find_results(
+    index: InvertedIndex,
+    matches: list[str],
+    ranking_terms: list[str],
+) -> list[RankedDocument]:
+    """Return ranked find results, or stable unranked results for metadata-only queries."""
+    if not ranking_terms:
+        return [RankedDocument(document_id=document_id, score=0.0) for document_id in matches]
+    return rank_documents(index, matches, ranking_terms)
+
+
+def format_relevance_label(score: float, *, has_term_ranking: bool) -> str:
+    """Format the result relevance label for text and metadata-only queries."""
+    if not has_term_ranking:
+        return "score=N/A"
+    return f"score={score:.4f}"
+
+
+def truncate_snippet(text: str, *, max_length: int = MAX_SNIPPET_LENGTH) -> str:
+    """Truncate a quote snippet for terminal display without altering stored metadata."""
+    if len(text) <= max_length:
+        return text
+
+    trimmed = text[: max_length - 3].rstrip()
+    if " " in trimmed:
+        trimmed = trimmed.rsplit(" ", 1)[0]
+    return f"{trimmed}..."
 
 
 def main(argv: list[str] | None = None) -> int:
