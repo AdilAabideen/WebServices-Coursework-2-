@@ -1,0 +1,60 @@
+"""Tests for query suggestions."""
+
+from __future__ import annotations
+
+from src.indexer import Document, build_inverted_index
+from src.query_parser import parse_query
+from src.suggest import levenshtein_distance, suggest_query, suggest_terms
+
+
+def build_suggest_index():
+    """Create a compact index for suggestion tests."""
+    return build_inverted_index(
+        [
+            Document(document_id="doc-1", text="friends friends friends friendship"),
+            Document(document_id="doc-2", text="friendship friendly life"),
+            Document(document_id="doc-3", text="indifference love life"),
+        ]
+    )
+
+
+def test_typo_returns_nearest_word() -> None:
+    index = build_suggest_index()
+
+    suggestions = suggest_terms(index, "frends")
+
+    assert suggestions
+    assert suggestions[0].term == "friends"
+
+
+def test_exact_word_returns_no_suggestion_needed() -> None:
+    index = build_suggest_index()
+
+    assert suggest_terms(index, "friends") == []
+
+
+def test_unrelated_word_returns_no_suggestion() -> None:
+    index = build_suggest_index()
+
+    assert suggest_terms(index, "xylophone") == []
+
+
+def test_suggestions_are_sorted_by_edit_distance_and_frequency() -> None:
+    index = build_suggest_index()
+
+    suggestions = suggest_terms(index, "friendsip", limit=3)
+
+    assert [suggestion.term for suggestion in suggestions][:2] == ["friendship", "friends"]
+
+
+def test_levenshtein_distance_counts_basic_edits() -> None:
+    assert levenshtein_distance("friends", "frends") == 1
+    assert levenshtein_distance("love", "life") == 2
+
+
+def test_query_suggestion_rebuilds_multi_term_query() -> None:
+    index = build_suggest_index()
+
+    suggested = suggest_query(index, parse_query("good frends"))
+
+    assert suggested == "good friends"

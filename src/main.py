@@ -25,6 +25,7 @@ from src.search import (
     normalize_query_terms,
 )
 from src.storage import load_index, save_index
+from src.suggest import suggest_query
 
 
 class CliArgumentParser(argparse.ArgumentParser):
@@ -233,6 +234,9 @@ def run_find(args: argparse.Namespace) -> int:
     rendered_query = render_query_for_output(parsed_query.display_text())
     if not matches:
         print(f"No results found for query: {rendered_query}.")
+        suggested_query = suggest_query(index, parsed_query)
+        if suggested_query is not None:
+            print(f"Did you mean: {render_query_for_output(suggested_query)}?")
         return 0
 
     ranking_terms = parsed_query.scoring_terms()

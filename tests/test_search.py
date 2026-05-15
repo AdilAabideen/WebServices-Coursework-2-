@@ -360,6 +360,18 @@ def test_find_missing_word(tmp_path: Path, capsys) -> None:
     assert 'No results found for query: "missing".' in captured.out
 
 
+def test_find_missing_word_shows_suggestion_when_available(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "frends", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert 'No results found for query: "frends".' in captured.out
+    assert 'Did you mean: "friends"?' in captured.out
+
+
 def test_find_empty_query(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
