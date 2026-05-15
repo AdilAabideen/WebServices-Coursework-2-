@@ -26,7 +26,7 @@ def inverse_document_frequency(index: InvertedIndex, term: str) -> float:
     if term_info is None or term_info.document_frequency == 0:
         return 0.0
 
-    return math.log(index.document_count / term_info.document_frequency) + 1.0
+    return math.log((1.0 + index.document_count) / (1.0 + term_info.document_frequency)) + 1.0
 
 
 def score_document(index: InvertedIndex, document_id: str, terms: list[str]) -> float:
