@@ -6,13 +6,20 @@ import argparse
 import sys
 from typing import NoReturn
 
-from src.config import DEFAULT_DELAY_SECONDS, DEFAULT_INDEX_PATH, DEFAULT_START_URL
+from src.config import (
+    DEFAULT_DELAY_SECONDS,
+    DEFAULT_INDEX_PATH,
+    DEFAULT_START_URL,
+    MAX_SNIPPET_LENGTH,
+)
 from src.crawler import Crawler
-from src.exceptions import CliUsageError, IndexStorageError, ProjectError
+from src.exceptions import CliUsageError, IndexStorageError, ProjectError, QuerySyntaxError
 from src.indexer import build_index_from_pages
+from src.models import InvertedIndex, RankedDocument
+from src.query_parser import parse_query
 from src.ranking import rank_documents
 from src.search import (
-    find_matching_documents,
+    execute_query,
     find_matching_quotes,
     get_term_info,
     normalize_query_terms,
@@ -209,10 +216,11 @@ def run_print_term(args: argparse.Namespace) -> int:
 
 def run_find(args: argparse.Namespace) -> int:
     """Find documents containing all terms from a query."""
-    query = " ".join(args.query)
-    normalized_terms = normalize_query_terms(query)
-    if not normalized_terms:
-        print("Please provide a non-empty query.", file=sys.stderr)
+    query = reconstruct_query(args.query)
+    try:
+        parsed_query = parse_query(query)
+    except QuerySyntaxError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     try:
@@ -221,31 +229,87 @@ def run_find(args: argparse.Namespace) -> int:
         print(str(exc), file=sys.stderr)
         return 1
 
-    matches = find_matching_documents(index, query)
+    matches = execute_query(index, parsed_query)
+    rendered_query = render_query_for_output(parsed_query.display_text())
     if not matches:
-        print(f'No results found for query: "{" ".join(normalized_terms)}".')
+        print(f"No results found for query: {rendered_query}.")
         return 0
 
-    print(f'Results for query: "{" ".join(normalized_terms)}"')
-    for rank, result in enumerate(rank_documents(index, matches, normalized_terms), start=1):
+    ranking_terms = parsed_query.scoring_terms()
+    ranked_results = build_find_results(index, matches, ranking_terms)
+    print(f"Results for query: {rendered_query}")
+    for rank, result in enumerate(ranked_results, start=1):
         metadata = index.documents.get(result.document_id, {})
         url = metadata.get("url", result.document_id)
         quote_count = metadata.get("quote_count", "unknown")
-        print(f"{rank}. {url} | quotes={quote_count} | score={result.score:.4f}")
+        relevance = format_relevance_label(result.score, has_term_ranking=bool(ranking_terms))
+        print(f"{rank}. {url} | quotes={quote_count} | {relevance}")
 
-        snippets = find_matching_quotes(metadata, normalized_terms)
+        snippets = find_matching_quotes(metadata, parsed_query)
         for snippet in snippets:
-            print(f'   Match: "{snippet.text}"')
+            print(f'   Match: "{truncate_snippet(snippet.text)}"')
             print(f"   Author: {snippet.author}")
             print(f"   Tags: {', '.join(snippet.tags)}")
     return 0
 
 
+def reconstruct_query(parts: list[str]) -> str:
+    """Rebuild a raw query string while preserving shell-quoted phrases."""
+    reconstructed: list[str] = []
+    for part in parts:
+        if (
+            any(character.isspace() for character in part)
+            and not part.startswith(("author:", "tag:", "-"))
+            and not (part.startswith('"') and part.endswith('"'))
+        ):
+            reconstructed.append(f'"{part}"')
+        else:
+            reconstructed.append(part)
+    return " ".join(reconstructed)
+
+
+def render_query_for_output(query_text: str) -> str:
+    """Format a normalized query string for user-facing CLI output."""
+    if query_text.startswith('"') and query_text.endswith('"'):
+        return query_text
+    return f'"{query_text}"'
+
+
+def build_find_results(
+    index: InvertedIndex,
+    matches: list[str],
+    ranking_terms: list[str],
+) -> list[RankedDocument]:
+    """Return ranked find results, or stable unranked results for metadata-only queries."""
+    if not ranking_terms:
+        return [RankedDocument(document_id=document_id, score=0.0) for document_id in matches]
+    return rank_documents(index, matches, ranking_terms)
+
+
+def format_relevance_label(score: float, *, has_term_ranking: bool) -> str:
+    """Format the result relevance label for text and metadata-only queries."""
+    if not has_term_ranking:
+        return "score=N/A"
+    return f"score={score:.4f}"
+
+
+def truncate_snippet(text: str, *, max_length: int = MAX_SNIPPET_LENGTH) -> str:
+    """Truncate a quote snippet for terminal display without altering stored metadata."""
+    if len(text) <= max_length:
+        return text
+
+    trimmed = text[: max_length - 3].rstrip()
+    if " " in trimmed:
+        trimmed = trimmed.rsplit(" ", 1)[0]
+    return f"{trimmed}..."
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the command-line entry point."""
     parser = build_parser()
+    raw_args = list(sys.argv[1:] if argv is None else argv)
     try:
-        args = parser.parse_args(argv)
+        args, unknown = parser.parse_known_args(argv)
     except CliUsageError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         parser.print_help(sys.stderr)
@@ -261,12 +325,37 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "load":
         return run_load(args)
     if args.command == "print":
+        if unknown:
+            print(f"Error: unrecognized arguments: {' '.join(unknown)}", file=sys.stderr)
+            parser.print_help(sys.stderr)
+            return 1
         return run_print_term(args)
     if args.command == "find":
+        args.query = extract_find_query_args(raw_args[1:]) if raw_args else args.query
         return run_find(args)
+    if unknown:
+        print(f"Error: unrecognized arguments: {' '.join(unknown)}", file=sys.stderr)
+        parser.print_help(sys.stderr)
+        return 1
 
     parser.print_help(sys.stderr)
     return 1
+
+
+def extract_find_query_args(raw_args: list[str]) -> list[str]:
+    """Extract raw find-query tokens while preserving exclusion terms."""
+    query_parts: list[str] = []
+    skip_next = False
+    for index, token in enumerate(raw_args):
+        if skip_next:
+            skip_next = False
+            continue
+        if token == "--path":
+            if index + 1 < len(raw_args):
+                skip_next = True
+            continue
+        query_parts.append(token)
+    return query_parts
 
 
 if __name__ == "__main__":

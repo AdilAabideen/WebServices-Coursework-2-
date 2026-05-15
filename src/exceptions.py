@@ -25,3 +25,7 @@ class IndexStorageError(ProjectError):
 
 class IndexValidationError(IndexStorageError):
     """Raised when an index payload has invalid or incomplete structure."""
+
+
+class QuerySyntaxError(ProjectError):
+    """Raised when a search query has invalid syntax."""
