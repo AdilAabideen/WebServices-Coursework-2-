@@ -9,7 +9,7 @@ from pathlib import Path
 from statistics import mean
 from time import perf_counter
 
-from src.config import DEFAULT_INDEX_PATH, DEFAULT_START_URL
+from src.config import DEFAULT_DELAY_SECONDS, DEFAULT_INDEX_PATH, DEFAULT_START_URL
 from src.crawler import Crawler
 from src.indexer import Document, build_index_from_pages, build_inverted_index
 from src.models import InvertedIndex
@@ -53,7 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--crawl-delay",
         type=float,
-        default=0.0,
+        default=DEFAULT_DELAY_SECONDS,
         help="Delay used during the live crawl benchmark.",
     )
     parser.add_argument(
