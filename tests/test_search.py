@@ -6,8 +6,9 @@ from pathlib import Path
 
 from src.indexer import Document, build_inverted_index
 from src.main import build_highlight_targets, highlight_terms, main
-from src.query_parser import parse_query
-from src.search import execute_query
+from src.models import Quote
+from src.query_parser import ParsedQuery, parse_query
+from src.search import execute_query, find_matching_documents, find_matching_quotes
 from src.storage import save_index
 
 
@@ -233,6 +234,38 @@ def test_phrase_query_rejects_non_adjacent_terms() -> None:
     assert matches == ["doc-1"]
 
 
+def test_find_matching_documents_handles_empty_and_missing_terms() -> None:
+    index = build_inverted_index([Document(document_id="doc-1", text="good friends")])
+
+    assert find_matching_documents(index, "") == []
+    assert find_matching_documents(index, "missing") == []
+
+
+def test_find_matching_documents_returns_and_matches() -> None:
+    index = build_inverted_index(
+        [
+            Document(document_id="doc-1", text="good friends"),
+            Document(document_id="doc-2", text="good habits"),
+        ]
+    )
+
+    assert find_matching_documents(index, "good friends") == ["doc-1"]
+
+
+def test_execute_query_handles_no_positive_clauses() -> None:
+    index = build_inverted_index([Document(document_id="doc-1", text="good friends")])
+    empty_query = ParsedQuery(
+        mode="and",
+        terms=[],
+        phrases=[],
+        excluded_terms=[],
+        author_filters=[],
+        tag_filters=[],
+    )
+
+    assert execute_query(index, empty_query) == []
+
+
 def test_find_or_query_returns_union_of_results(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -347,6 +380,36 @@ def test_find_missing_quote_metadata_does_not_crash_output(tmp_path: Path, capsy
     assert exit_code == 0
     assert "https://quotes.toscrape.com/page/2/" in captured.out
     assert "score=" in captured.out
+
+
+def test_find_matching_quotes_skips_malformed_payloads_and_returns_partial_matches() -> None:
+    metadata = {
+        "quotes": [
+            "bad-payload",
+            {
+                "text": "Friendship matters most",
+                "author": "Author One",
+                "tags": ["support"],
+            },
+        ]
+    }
+
+    matches = find_matching_quotes(metadata, parse_query("support"))
+
+    assert len(matches) == 1
+    assert matches[0] == Quote(
+        text="Friendship matters most",
+        author="Author One",
+        tags=["support"],
+    )
+
+
+def test_find_matching_quotes_handles_invalid_quote_structure() -> None:
+    metadata = {"quotes": [{"text": "Love", "author": "Author One"}]}
+
+    matches = find_matching_quotes(metadata, parse_query("love"))
+
+    assert matches == []
 
 
 def test_find_missing_word(tmp_path: Path, capsys) -> None:

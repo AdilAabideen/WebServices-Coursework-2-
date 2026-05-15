@@ -50,6 +50,9 @@ def test_suggestions_are_sorted_by_edit_distance_and_frequency() -> None:
 def test_levenshtein_distance_counts_basic_edits() -> None:
     assert levenshtein_distance("friends", "frends") == 1
     assert levenshtein_distance("love", "life") == 2
+    assert levenshtein_distance("", "abc") == 3
+    assert levenshtein_distance("abc", "") == 3
+    assert levenshtein_distance("same", "same") == 0
 
 
 def test_query_suggestion_rebuilds_multi_term_query() -> None:
@@ -58,3 +61,25 @@ def test_query_suggestion_rebuilds_multi_term_query() -> None:
     suggested = suggest_query(index, parse_query("good frends"))
 
     assert suggested == "good friends"
+
+
+def test_query_suggestion_handles_phrase_and_filters() -> None:
+    index = build_suggest_index()
+
+    suggested = suggest_query(index, parse_query('"frends life" author:einstein tag:life -missing'))
+
+    assert suggested == '"friends life" author:einstein tag:life -missing'
+
+
+def test_query_suggestion_returns_none_when_nothing_changes() -> None:
+    index = build_suggest_index()
+
+    assert suggest_query(index, parse_query("friends")) is None
+
+
+def test_query_suggestion_preserves_or_separator() -> None:
+    index = build_suggest_index()
+
+    suggested = suggest_query(index, parse_query("frends OR life"))
+
+    assert suggested == "friends OR life"

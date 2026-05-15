@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from bs4 import BeautifulSoup
 
 from src.crawler import Crawler
+from src.exceptions import CrawlError
 
 
 SINGLE_PAGE_HTML = """
@@ -198,3 +200,66 @@ def test_delay_function_is_called_between_requests() -> None:
     crawler.crawl()
 
     assert sleep_calls == [4.0]
+
+
+def test_crawler_constructor_validates_inputs() -> None:
+    try:
+        Crawler(start_url="")
+    except CrawlError as exc:
+        assert "start URL" in str(exc)
+    else:
+        raise AssertionError("Expected CrawlError for empty start URL")
+
+    try:
+        Crawler(delay_seconds=-1.0)
+    except CrawlError as exc:
+        assert "delay" in str(exc)
+    else:
+        raise AssertionError("Expected CrawlError for negative delay")
+
+    try:
+        Crawler(timeout=0.0)
+    except CrawlError as exc:
+        assert "timeout" in str(exc)
+    else:
+        raise AssertionError("Expected CrawlError for invalid timeout")
+
+
+def test_crawl_rejects_negative_max_pages() -> None:
+    crawler = Crawler()
+
+    try:
+        crawler.crawl(max_pages=-1)
+    except CrawlError as exc:
+        assert "max_pages" in str(exc)
+    else:
+        raise AssertionError("Expected CrawlError for negative max_pages")
+
+
+def test_normalize_url_rejects_empty_string() -> None:
+    crawler = Crawler()
+
+    try:
+        crawler.normalize_url("")
+    except CrawlError as exc:
+        assert "empty URL" in str(exc)
+    else:
+        raise AssertionError("Expected CrawlError for empty URL")
+
+
+def test_extract_next_page_link_handles_missing_href() -> None:
+    crawler = Crawler()
+    soup = BeautifulSoup('<li class="next"><a>Next</a></li>', "html.parser")
+
+    assert crawler.extract_next_page_link(soup, base_url="https://quotes.toscrape.com/") is None
+
+
+def test_extract_quote_text_handles_missing_and_nested_text_node() -> None:
+    crawler = Crawler()
+    assert crawler._extract_quote_text(None) == ""
+
+    soup = BeautifulSoup('<span class="text"><b>Nested text</b></span>', "html.parser")
+    text_node = soup.select_one("span.text")
+
+    assert text_node is not None
+    assert crawler._extract_quote_text(text_node) == "Nested text"

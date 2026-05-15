@@ -402,6 +402,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
+    if args.command != "find" and unknown:
+        print(f"Error: unrecognized arguments: {' '.join(unknown)}", file=sys.stderr)
+        parser.print_help(sys.stderr)
+        return 1
+
     if args.command == "crawl":
         return run_crawl(args)
     if args.command == "build":
@@ -409,18 +414,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "load":
         return run_load(args)
     if args.command == "print":
-        if unknown:
-            print(f"Error: unrecognized arguments: {' '.join(unknown)}", file=sys.stderr)
-            parser.print_help(sys.stderr)
-            return 1
         return run_print_term(args)
     if args.command == "find":
         args.query = extract_find_query_args(raw_args[1:]) if raw_args else args.query
         return run_find(args)
-    if unknown:
-        print(f"Error: unrecognized arguments: {' '.join(unknown)}", file=sys.stderr)
-        parser.print_help(sys.stderr)
-        return 1
 
     parser.print_help(sys.stderr)
     return 1
