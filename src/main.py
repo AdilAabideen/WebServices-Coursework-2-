@@ -3,7 +3,7 @@
 
 def main() -> int:
     """Run the minimal project entry point."""
-    print("WebServices2 scaffold is set up.")
+    print("WebServices2 scaffold is set up. Crawler module is available.")
     return 0
 
 
