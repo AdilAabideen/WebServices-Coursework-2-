@@ -136,6 +136,21 @@ def test_avoid_duplicate_urls() -> None:
     ]
 
 
+def test_crawl_can_stop_after_max_pages() -> None:
+    session = MockSession(
+        {
+            "https://quotes.toscrape.com/": MockResponse(SINGLE_PAGE_HTML),
+            "https://quotes.toscrape.com/page/2/": MockResponse(LAST_PAGE_HTML),
+        }
+    )
+    crawler = Crawler(session=session)
+
+    pages = crawler.crawl(max_pages=1)
+
+    assert [page.url for page in pages] == ["https://quotes.toscrape.com/"]
+    assert session.requested_urls == ["https://quotes.toscrape.com/"]
+
+
 def test_handle_failed_request() -> None:
     session = MockSession(
         {

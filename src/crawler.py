@@ -53,13 +53,16 @@ class Crawler:
         self._queued_urls: set[str] = set()
         self._last_request_time: float | None = None
 
-    def crawl(self) -> list[PageContent]:
+    def crawl(self, *, max_pages: int | None = None) -> list[PageContent]:
         """Visit reachable quote pages from the start URL."""
         pages: list[PageContent] = []
         pending_urls = deque([self.start_url])
         self._queued_urls = {self.normalize_url(self.start_url)}
 
         while pending_urls:
+            if max_pages is not None and len(pages) >= max_pages:
+                break
+
             current_url = self.normalize_url(pending_urls.popleft())
             self._queued_urls.discard(current_url)
 
