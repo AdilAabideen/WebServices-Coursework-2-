@@ -271,6 +271,8 @@ def test_find_author_filter_uses_document_metadata(tmp_path: Path, capsys) -> No
     assert 'Results for query: "author:einstein"' in captured.out
     assert "https://quotes.toscrape.com/page/9/" in captured.out
     assert "Albert Einstein" in captured.out
+    assert "score=N/A" in captured.out
+    assert "score=0.0000" not in captured.out
     assert "https://quotes.toscrape.com/page/2/" not in captured.out
 
 
@@ -285,6 +287,7 @@ def test_find_tag_filter_uses_document_metadata(tmp_path: Path, capsys) -> None:
     assert 'Results for query: "tag:life"' in captured.out
     assert "https://quotes.toscrape.com/page/2/" in captured.out
     assert "https://quotes.toscrape.com/page/9/" in captured.out
+    assert "score=N/A" in captured.out
 
 
 def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> None:
@@ -388,6 +391,110 @@ def test_find_invalid_or_syntax_is_handled_gracefully(tmp_path: Path, capsys) ->
 
     assert exit_code == 1
     assert "OR must appear between valid query clauses." in captured.err
+
+
+def test_find_unmatched_quote_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", '"good friends', "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "unmatched quote" in captured.err
+
+
+def test_find_leading_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "OR", "friends", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "OR must appear between valid query clauses." in captured.err
+
+
+def test_find_empty_author_filter_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "author:", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Author filter must include a value." in captured.err
+
+
+def test_find_empty_tag_filter_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "tag:", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Tag filter must include a value." in captured.err
+
+
+def test_find_trailing_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "good", "OR", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "OR must appear between valid query clauses." in captured.err
+
+
+def test_find_exclusion_only_is_handled_gracefully(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "-friends", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Please provide at least one searchable term or filter." in captured.err
+
+
+def test_find_long_snippets_are_truncated_in_output(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    long_quote = (
+        "This life is what you make it and good friends help you keep going even when the road is long "
+        "because the people who stay with you through difficult seasons matter more than temporary noise "
+        "and the story keeps unfolding with patience, humor, and courage."
+    )
+    index = build_inverted_index(
+        [
+            Document(
+                document_id="doc-long",
+                text=f"{long_quote} Long Author life friendship courage",
+                metadata={
+                    "url": "https://quotes.toscrape.com/page/long/",
+                    "quote_count": 1,
+                    "authors": ["Long Author"],
+                    "tags": ["life", "friendship", "courage"],
+                    "quotes": [
+                        {
+                            "text": long_quote,
+                            "author": "Long Author",
+                            "tags": ["life", "friendship", "courage"],
+                        }
+                    ],
+                },
+            )
+        ]
+    )
+    save_index(index, path)
+
+    exit_code = main(["find", "life", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "..." in captured.out
+    assert long_quote not in captured.out
 
 
 def test_find_missing_index_file(tmp_path: Path, capsys) -> None:

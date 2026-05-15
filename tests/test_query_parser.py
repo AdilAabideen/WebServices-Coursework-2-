@@ -46,3 +46,18 @@ def test_invalid_or_syntax_raises_helpful_error() -> None:
 def test_unmatched_quote_raises_helpful_error() -> None:
     with pytest.raises(QuerySyntaxError, match="unmatched quote"):
         parse_query('"good friends')
+
+
+def test_empty_author_filter_raises_helpful_error() -> None:
+    with pytest.raises(QuerySyntaxError, match="Author filter must include a value."):
+        parse_query("author:")
+
+
+def test_empty_tag_filter_raises_helpful_error() -> None:
+    with pytest.raises(QuerySyntaxError, match="Tag filter must include a value."):
+        parse_query("tag:")
+
+
+def test_exclusion_only_query_raises_helpful_error() -> None:
+    with pytest.raises(QuerySyntaxError, match="Please provide at least one searchable term or filter."):
+        parse_query("-friends")
