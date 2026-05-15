@@ -16,6 +16,7 @@ This project crawls the quotes website, builds a positional inverted index, stor
 - `OR` and exclusion query support
 - `author:` and `tag:` metadata filters
 - misspelling suggestions using edit distance
+- result snippets highlight matched query terms in the terminal
 - benchmark runner and complexity analysis
 - automated testing, coverage, and CI workflows
 

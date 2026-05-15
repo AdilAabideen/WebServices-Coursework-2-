@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from typing import NoReturn
 
@@ -16,7 +17,7 @@ from src.crawler import Crawler
 from src.exceptions import CliUsageError, IndexStorageError, ProjectError, QuerySyntaxError
 from src.indexer import build_index_from_pages
 from src.models import InvertedIndex, RankedDocument
-from src.query_parser import parse_query
+from src.query_parser import ParsedQuery, parse_query
 from src.ranking import rank_documents
 from src.search import (
     execute_query,
@@ -26,6 +27,10 @@ from src.search import (
 )
 from src.storage import load_index, save_index
 from src.suggest import suggest_query
+
+
+ANSI_HIGHLIGHT_START = "\033[1;33m"
+ANSI_HIGHLIGHT_END = "\033[0m"
 
 
 class CliArgumentParser(argparse.ArgumentParser):
@@ -251,7 +256,9 @@ def run_find(args: argparse.Namespace) -> int:
 
         snippets = find_matching_quotes(metadata, parsed_query)
         for snippet in snippets:
-            print(f'   Match: "{truncate_snippet(snippet.text)}"')
+            print(
+                f'   Match: "{format_snippet_for_display(snippet.text, parsed_query)}"'
+            )
             print(f"   Author: {snippet.author}")
             print(f"   Tags: {', '.join(snippet.tags)}")
     return 0
@@ -306,6 +313,79 @@ def truncate_snippet(text: str, *, max_length: int = MAX_SNIPPET_LENGTH) -> str:
     if " " in trimmed:
         trimmed = trimmed.rsplit(" ", 1)[0]
     return f"{trimmed}..."
+
+
+def format_snippet_for_display(
+    text: str,
+    query: ParsedQuery,
+    *,
+    use_colour: bool | None = None,
+) -> str:
+    """Truncate and optionally highlight a snippet for CLI output."""
+    truncated = truncate_snippet(text)
+    highlight_targets = build_highlight_targets(query)
+    if not highlight_targets:
+        return truncated
+
+    if use_colour is None:
+        use_colour = sys.stdout.isatty()
+    if not use_colour:
+        return truncated
+    return highlight_terms(truncated, highlight_targets, use_colour=True)
+
+
+def build_highlight_targets(query: ParsedQuery) -> list[str]:
+    """Return positive query text that should be highlighted in snippets."""
+    targets: list[str] = []
+
+    for phrase in query.phrases:
+        phrase_text = " ".join(phrase).strip()
+        if phrase_text and phrase_text not in targets:
+            targets.append(phrase_text)
+
+    for term in query.terms:
+        if term not in targets:
+            targets.append(term)
+
+    return targets
+
+
+def highlight_terms(text: str, query_terms: list[str], *, use_colour: bool = True) -> str:
+    """Highlight matched terms or phrases within text."""
+    if not text or not query_terms:
+        return text
+
+    compiled_patterns = build_highlight_patterns(query_terms)
+    if not compiled_patterns:
+        return text
+
+    pattern = re.compile("|".join(compiled_patterns), re.IGNORECASE)
+
+    def replace(match: re.Match[str]) -> str:
+        matched_text = match.group(0)
+        if use_colour:
+            return f"{ANSI_HIGHLIGHT_START}{matched_text}{ANSI_HIGHLIGHT_END}"
+        return f"[{matched_text}]"
+
+    return pattern.sub(replace, text)
+
+
+def build_highlight_patterns(query_terms: list[str]) -> list[str]:
+    """Build ordered regex patterns for phrases first, then single terms."""
+    phrases = sorted(
+        {term for term in query_terms if " " in term and term.strip()},
+        key=len,
+        reverse=True,
+    )
+    single_terms = sorted(
+        {term for term in query_terms if " " not in term and term.strip()},
+        key=len,
+        reverse=True,
+    )
+
+    patterns = [re.escape(phrase) for phrase in phrases]
+    patterns.extend(rf"\b{re.escape(term)}\b" for term in single_terms)
+    return patterns
 
 
 def main(argv: list[str] | None = None) -> int:
