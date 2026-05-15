@@ -60,3 +60,11 @@ def test_corrupt_file_handled(tmp_path: Path) -> None:
 
     with pytest.raises(IndexStorageError, match="Index file is corrupt"):
         load_index(path)
+
+
+def test_invalid_structure_handled(tmp_path: Path) -> None:
+    path = tmp_path / "index.json"
+    path.write_text('{"documents": {}, "terms": []}', encoding="utf-8")
+
+    with pytest.raises(IndexStorageError, match="Index file has invalid structure"):
+        load_index(path)
