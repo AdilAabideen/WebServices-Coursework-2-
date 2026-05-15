@@ -226,7 +226,7 @@ def run_find(args: argparse.Namespace) -> int:
         metadata = index.documents.get(result.document_id, {})
         url = metadata.get("url", result.document_id)
         quote_count = metadata.get("quote_count", "unknown")
-        print(f"- {url} | quotes={quote_count} | score={result.score}")
+        print(f"- {url} | quotes={quote_count} | score={result.score:.4f}")
     return 0
 
 

@@ -152,7 +152,7 @@ class RankedDocument:
     """A search match paired with a ranking score."""
 
     document_id: str
-    score: int
+    score: float
 
 
 def validate_mapping_keys(
