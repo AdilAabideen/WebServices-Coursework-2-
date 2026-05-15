@@ -57,6 +57,49 @@ def test_print_missing_word(tmp_path: Path, capsys) -> None:
     assert 'No postings found for "nonsense".' in captured.out
 
 
+def test_print_uppercase_word_normalizes_case(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["print", "GOOD", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert 'Term: "good"' in captured.out
+
+
+def test_print_punctuation_only_word_is_handled(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["print", "!!!", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Please provide a non-empty word to print." in captured.err
+
+
+def test_print_missing_index_file(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "missing.json"
+
+    exit_code = main(["print", "good", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Index file not found" in captured.err
+
+
+def test_print_corrupt_index_file(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    path.write_text("{bad-json", encoding="utf-8")
+
+    exit_code = main(["print", "good", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Index file is corrupt" in captured.err
+
+
 def test_find_single_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -84,6 +127,18 @@ def test_find_multi_word_query(tmp_path: Path, capsys) -> None:
     assert "https://example.com/doc-3" not in captured.out
 
 
+def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "GOOD", "FRIENDS", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert 'Results for query: "good friends"' in captured.out
+    assert "https://example.com/doc-1" in captured.out
+
+
 def test_find_missing_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -104,3 +159,35 @@ def test_find_empty_query(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 1
     assert "Please provide a non-empty query." in captured.err
+
+
+def test_find_punctuation_only_query(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "!!!", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Please provide a non-empty query." in captured.err
+
+
+def test_find_missing_index_file(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "missing.json"
+
+    exit_code = main(["find", "good", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Index file not found" in captured.err
+
+
+def test_find_corrupt_index_file(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    path.write_text("{bad-json", encoding="utf-8")
+
+    exit_code = main(["find", "good", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Index file is corrupt" in captured.err

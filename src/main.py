@@ -15,9 +15,16 @@ from src.storage import IndexStorageError, load_index, save_index
 DEFAULT_INDEX_PATH = Path("data/index.json")
 
 
+class CliArgumentParser(argparse.ArgumentParser):
+    """Argument parser that reports errors without exiting the process."""
+
+    def error(self, message: str) -> None:
+        raise ValueError(message)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Create the command-line parser."""
-    parser = argparse.ArgumentParser(prog="python -m src.main")
+    parser = CliArgumentParser(prog="python -m src.main")
     subparsers = parser.add_subparsers(dest="command")
 
     crawl_parser = subparsers.add_parser(
@@ -225,7 +232,12 @@ def run_find(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     """Run the command-line entry point."""
     parser = build_parser()
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        parser.print_help(sys.stderr)
+        return 1
 
     if args.command == "crawl":
         return run_crawl(args)
@@ -238,8 +250,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "find":
         return run_find(args)
 
-    parser.print_help()
-    return 0
+    parser.print_help(sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

@@ -165,6 +165,20 @@ def test_handle_failed_request() -> None:
     assert crawler.visited_urls == {"https://quotes.toscrape.com/"}
 
 
+def test_handle_timeout_request() -> None:
+    session = MockSession(
+        {
+            "https://quotes.toscrape.com/": requests.Timeout("slow"),
+        }
+    )
+    crawler = Crawler(session=session)
+
+    pages = crawler.crawl()
+
+    assert pages == []
+    assert crawler.visited_urls == {"https://quotes.toscrape.com/"}
+
+
 def test_delay_function_is_called_between_requests() -> None:
     sleep_calls: list[float] = []
     time_values = iter([100.0, 102.0, 106.0])

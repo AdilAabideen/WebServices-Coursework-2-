@@ -78,3 +78,19 @@ def test_load_command_handles_corrupt_file(tmp_path: Path, capsys) -> None:
 
     assert exit_code == 1
     assert "Index file is corrupt" in captured.err
+
+
+def test_main_handles_empty_command(capsys) -> None:
+    exit_code = main([])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "usage: python -m src.main" in captured.err
+
+
+def test_main_handles_unknown_command(capsys) -> None:
+    exit_code = main(["unknown-command"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "invalid choice" in captured.err
