@@ -139,6 +139,20 @@ def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> Non
     assert "https://example.com/doc-1" in captured.out
 
 
+def test_find_single_term_results_are_ranked(tmp_path: Path, capsys) -> None:
+    path = tmp_path / "index.json"
+    build_search_index(path)
+
+    exit_code = main(["find", "good", "--path", str(path)])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "score=" in captured.out
+    assert captured.out.index("https://example.com/doc-2") < captured.out.index(
+        "https://example.com/doc-1"
+    )
+
+
 def test_find_missing_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
