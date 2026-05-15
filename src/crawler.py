@@ -109,9 +109,9 @@ class Crawler:
         for quote_node in soup.select("div.quote"):
             text_node = quote_node.select_one("span.text")
             author_node = quote_node.select_one("small.author")
-            tag_nodes = quote_node.select("div.tags a.tag")
+            tag_nodes = quote_node.select("a.tag")
 
-            text = text_node.get_text(strip=True) if text_node else ""
+            text = self._extract_quote_text(text_node)
             author = author_node.get_text(strip=True) if author_node else ""
             tags = [tag.get_text(strip=True) for tag in tag_nodes]
 
@@ -146,3 +146,16 @@ class Crawler:
 
     def _mark_request_complete(self) -> None:
         self._last_request_time = self.time_func()
+
+    def _extract_quote_text(self, text_node: BeautifulSoup | None) -> str:
+        """Prefer the direct quote text even when the HTML is malformed."""
+        if text_node is None:
+            return ""
+
+        for child in text_node.children:
+            if isinstance(child, str):
+                candidate = child.strip()
+                if candidate:
+                    return candidate
+
+        return text_node.get_text(strip=True)

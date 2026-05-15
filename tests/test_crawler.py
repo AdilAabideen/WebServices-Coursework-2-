@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -46,6 +47,10 @@ LAST_PAGE_HTML = """
 </html>
 """
 
+ACTUAL_PAGE_HTML = (
+    Path(__file__).with_name("fixtures") / "quotes_page_1.html"
+).read_text(encoding="utf-8")
+
 
 class MockResponse:
     """Minimal response stub for requests-based tests."""
@@ -76,30 +81,38 @@ class MockSession:
 
 def test_extract_next_page_link() -> None:
     crawler = Crawler()
-    page = crawler.parse_page("https://quotes.toscrape.com/", SINGLE_PAGE_HTML)
+    page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
 
     assert page.next_page == "https://quotes.toscrape.com/page/2/"
 
 
 def test_extract_quote_text() -> None:
     crawler = Crawler()
-    page = crawler.parse_page("https://quotes.toscrape.com/", SINGLE_PAGE_HTML)
+    page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
 
-    assert page.quotes[0].text == '"Life is about making an impact."'
+    assert page.quotes[-1].text == "“A day without sunshine is like, you know, night.”"
 
 
 def test_extract_authors() -> None:
     crawler = Crawler()
-    page = crawler.parse_page("https://quotes.toscrape.com/", SINGLE_PAGE_HTML)
+    page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
 
-    assert page.quotes[0].author == "Kevin Kruse"
+    assert page.quotes[0].author == "Albert Einstein"
+    assert page.quotes[-1].author == "Steve Martin"
 
 
 def test_extract_tags() -> None:
     crawler = Crawler()
-    page = crawler.parse_page("https://quotes.toscrape.com/", SINGLE_PAGE_HTML)
+    page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
 
-    assert page.quotes[0].tags == ["life", "inspirational"]
+    assert page.quotes[6].tags == ["life", "love"]
+
+
+def test_parse_actual_page_extracts_all_quotes() -> None:
+    crawler = Crawler()
+    page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
+
+    assert len(page.quotes) == 10
 
 
 def test_avoid_duplicate_urls() -> None:
