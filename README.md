@@ -1,28 +1,18 @@
 # WebServices2
 
-Initial scaffold for the `WebServices2` project.
+Python command-line search engine coursework for `https://quotes.toscrape.com/`.
 
 ## Overview
 
-This repository starts with a minimal Python application layout focused on:
+The project currently supports:
 
-- clear source and test separation
-- a runnable module entry point
-- a smoke test to confirm the package imports cleanly
-- basic project hygiene for Git and Python tooling
-
-## Project Structure
-
-```text
-.
-├── data/
-├── requirements.txt
-├── src/
-│   ├── __init__.py
-│   └── main.py
-└── tests/
-    └── test_smoke.py
-```
+- polite crawling across all quote pages
+- positional inverted indexing with per-document frequencies and token positions
+- JSON save/load for the built index
+- CLI search commands: `build`, `load`, `print`, and `find`
+- smoothed TF-IDF ranking
+- phrase, `OR`, exclusion, author, and tag queries
+- misspelling suggestions for failed text queries
 
 ## Getting Started
 
@@ -33,28 +23,34 @@ This repository starts with a minimal Python application layout focused on:
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+3. Build or load the index:
 
 ```bash
-python -m src.main
+python -m src.main build
+python -m src.main load
 ```
 
-4. Run tests:
+4. Run searches:
+
+```bash
+python -m src.main find love
+python -m src.main find '"good friends"'
+python -m src.main find good OR friends
+python -m src.main find author:einstein
+```
+
+5. Run tests:
 
 ```bash
 pytest
 ```
 
+## Benchmarking And Analysis
+
+- Benchmark script: `python -m src.benchmark`
+- Benchmark notes: [docs/BENCHMARKS.md](/Users/adil/Documents/University/WebServices2/docs/BENCHMARKS.md)
+- Complexity analysis: [docs/COMPLEXITY.md](/Users/adil/Documents/University/WebServices2/docs/COMPLEXITY.md)
+
 ## Continuous Integration
 
-GitHub Actions runs a CI workflow on pushes and pull requests. The pipeline:
-
-- installs project dependencies from `requirements.txt`
-- runs `python -m src.main`
-- runs `pytest`
-
-## Next Steps
-
-- add application modules under `src/`
-- expand test coverage beyond smoke checks
-- document the project purpose, architecture, and usage in more detail
+GitHub Actions runs the Python test pipeline on pushes and pull requests. The workflow installs dependencies, runs the CLI entry point, and executes `pytest`.
