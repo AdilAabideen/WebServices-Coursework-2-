@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.crawler import PageContent, Quote
 from src.main import main
+from src.models import PageContent, Quote
 
 
 def test_build_command_crawls_indexes_and_saves(tmp_path: Path, monkeypatch, capsys) -> None:

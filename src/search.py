@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from src.indexer import InvertedIndex, TermInfo, tokenize
+from src.indexer import tokenize
+from src.models import InvertedIndex, TermInfo
 
 
 def normalize_query_terms(query: str) -> list[str]:

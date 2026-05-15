@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
 from typing import Callable
 from urllib.parse import urljoin
 import time
@@ -11,23 +10,9 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-
-@dataclass(frozen=True)
-class Quote:
-    """Structured quote data extracted from a page."""
-
-    text: str
-    author: str
-    tags: list[str]
-
-
-@dataclass(frozen=True)
-class PageContent:
-    """Parsed content for a crawled page."""
-
-    url: str
-    quotes: list[Quote]
-    next_page: str | None
+from src.config import DEFAULT_DELAY_SECONDS, DEFAULT_START_URL, DEFAULT_TIMEOUT_SECONDS
+from src.exceptions import CrawlError
+from src.models import PageContent, Quote
 
 
 class Crawler:
@@ -35,14 +20,20 @@ class Crawler:
 
     def __init__(
         self,
-        start_url: str = "https://quotes.toscrape.com/",
+        start_url: str = DEFAULT_START_URL,
         *,
-        delay_seconds: float = 6.0,
+        delay_seconds: float = DEFAULT_DELAY_SECONDS,
         session: requests.Session | None = None,
         sleep_func: Callable[[float], None] = time.sleep,
         time_func: Callable[[], float] = time.monotonic,
-        timeout: float = 10.0,
+        timeout: float = DEFAULT_TIMEOUT_SECONDS,
     ) -> None:
+        if not start_url:
+            raise CrawlError("Crawler start URL must not be empty.")
+        if delay_seconds < 0:
+            raise CrawlError("Crawler delay must be zero or greater.")
+        if timeout <= 0:
+            raise CrawlError("Crawler timeout must be greater than zero.")
         self.start_url = start_url
         self.delay_seconds = delay_seconds
         self.session = session or requests.Session()
@@ -55,6 +46,8 @@ class Crawler:
 
     def crawl(self, *, max_pages: int | None = None) -> list[PageContent]:
         """Visit reachable quote pages from the start URL."""
+        if max_pages is not None and max_pages < 0:
+            raise CrawlError("max_pages must be zero or greater when provided.")
         pages: list[PageContent] = []
         pending_urls = deque([self.start_url])
         self._queued_urls = {self.normalize_url(self.start_url)}
@@ -136,9 +129,12 @@ class Crawler:
 
     def normalize_url(self, url: str) -> str:
         """Normalize URLs so duplicate pages are not revisited."""
+        if not url:
+            raise CrawlError("Cannot normalize an empty URL.")
         return url.rstrip("/") + "/"
 
     def _respect_politeness_window(self) -> None:
+        """Sleep if needed so requests respect the configured delay."""
         if self._last_request_time is None:
             return
 
@@ -148,6 +144,7 @@ class Crawler:
             self.sleep_func(remaining_delay)
 
     def _mark_request_complete(self) -> None:
+        """Record the time at which a request attempt finished."""
         self._last_request_time = self.time_func()
 
     def _extract_quote_text(self, text_node: BeautifulSoup | None) -> str:
