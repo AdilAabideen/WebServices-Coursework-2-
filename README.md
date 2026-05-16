@@ -20,6 +20,20 @@ This project crawls the quotes website, builds a positional inverted index, stor
 - benchmark runner and complexity analysis
 - automated testing, coverage, and CI workflows
 
+## Advanced Features
+
+The project includes a few higher-level retrieval and usability features beyond basic keyword lookup:
+
+- Levenshtein-based misspelling suggestions
+- smoothed TF-IDF ranking over candidate matches
+- snippet highlighting for matched terms and phrases
+- metadata-aware filtering with `author:` and `tag:`
+- boolean `OR`, phrase search, and `-term` exclusion
+
+Details:
+
+- [ADVANCED_FEATURES.md](/Users/adil/Documents/University/WebServices2/docs/ADVANCED_FEATURES.md)
+
 ## Quick Start
 
 ```bash
@@ -248,6 +262,10 @@ Supported query forms:
 
 The parser normalizes case, handles invalid syntax gracefully, and routes the query into the correct matching path.
 
+Advanced query behavior, ranking, suggestions, and highlighting:
+
+- [ADVANCED_FEATURES.md](/Users/adil/Documents/University/WebServices2/docs/ADVANCED_FEATURES.md)
+
 ## Query Suggestions
 
 When a text query has no exact match, the project suggests likely vocabulary terms using Levenshtein distance with a conservative length filter.
@@ -288,13 +306,14 @@ mypy src
 Detailed notes:
 
 - [TESTING.md](/Users/adil/Documents/University/WebServices2/docs/TESTING.md)
+- [VIDEO_GUIDE.md](/Users/adil/Documents/University/WebServices2/docs/VIDEO_GUIDE.md)
 
 ## Coverage
 
 Current measured coverage:
 
 - `pytest --cov=src --cov-report=term-missing`
-- `91%` total coverage
+- `97%` total coverage
 
 This includes direct coverage for the benchmark module, which was previously the main uncovered area.
 
@@ -343,9 +362,9 @@ Detailed reflection:
 ## Future Work
 
 1. Index individual quotes as documents rather than whole pages.
-2. Add result snippets with highlighted matching terms.
+2. Add parenthesized boolean precedence and richer query composition.
 3. Optimise suggestions with a BK-tree or similar approximate-match structure.
-4. Improve boolean query precedence and parenthesized expressions.
+4. Add field-aware ranking or field-aware snippet explanations.
 5. Add exportable benchmark reports or plots.
 
 ## References

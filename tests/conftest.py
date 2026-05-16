@@ -1,4 +1,7 @@
-"""Test configuration for ensuring the project root is importable."""
+"""Test configuration for ensuring the project root is importable.
+
+Test role: shared pytest configuration used by the full test suite.
+"""
 
 from pathlib import Path
 import sys

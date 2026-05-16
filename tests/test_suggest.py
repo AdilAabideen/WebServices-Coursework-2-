@@ -1,4 +1,7 @@
-"""Tests for query suggestions."""
+"""Tests for query suggestions.
+
+Test type: unit tests for edit-distance suggestions, ranking, and correction rebuilding.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +21,7 @@ def build_suggest_index():
     )
 
 
+# Unit test for typo returns nearest word.
 def test_typo_returns_nearest_word() -> None:
     index = build_suggest_index()
 
@@ -27,18 +31,21 @@ def test_typo_returns_nearest_word() -> None:
     assert suggestions[0].term == "friends"
 
 
+# Unit test for exact word returns no suggestion needed.
 def test_exact_word_returns_no_suggestion_needed() -> None:
     index = build_suggest_index()
 
     assert suggest_terms(index, "friends") == []
 
 
+# Unit test for unrelated word returns no suggestion.
 def test_unrelated_word_returns_no_suggestion() -> None:
     index = build_suggest_index()
 
     assert suggest_terms(index, "xylophone") == []
 
 
+# Unit test for suggestions are sorted by edit distance and frequency.
 def test_suggestions_are_sorted_by_edit_distance_and_frequency() -> None:
     index = build_suggest_index()
 
@@ -47,6 +54,7 @@ def test_suggestions_are_sorted_by_edit_distance_and_frequency() -> None:
     assert [suggestion.term for suggestion in suggestions][:2] == ["friendship", "friends"]
 
 
+# Unit test for levenshtein distance counts basic edits.
 def test_levenshtein_distance_counts_basic_edits() -> None:
     assert levenshtein_distance("friends", "frends") == 1
     assert levenshtein_distance("love", "life") == 2
@@ -55,6 +63,7 @@ def test_levenshtein_distance_counts_basic_edits() -> None:
     assert levenshtein_distance("same", "same") == 0
 
 
+# Unit test for query suggestion rebuilds multi term query.
 def test_query_suggestion_rebuilds_multi_term_query() -> None:
     index = build_suggest_index()
 
@@ -63,6 +72,7 @@ def test_query_suggestion_rebuilds_multi_term_query() -> None:
     assert suggested == "good friends"
 
 
+# Unit test for query suggestion handles phrase and filters.
 def test_query_suggestion_handles_phrase_and_filters() -> None:
     index = build_suggest_index()
 
@@ -71,12 +81,14 @@ def test_query_suggestion_handles_phrase_and_filters() -> None:
     assert suggested == '"friends life" author:einstein tag:life -missing'
 
 
+# Unit test for query suggestion returns none when nothing changes.
 def test_query_suggestion_returns_none_when_nothing_changes() -> None:
     index = build_suggest_index()
 
     assert suggest_query(index, parse_query("friends")) is None
 
 
+# Unit test for query suggestion preserves or separator.
 def test_query_suggestion_preserves_or_separator() -> None:
     index = build_suggest_index()
 

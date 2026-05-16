@@ -1,0 +1,3 @@
+GITHUB_REPO_URL=https://github.com/AdilAabideen/WebServices-Coursework-2-
+
+VIDEO_URL=https://leeds365-my.sharepoint.com/:v:/g/personal/sc23aa2_leeds_ac_uk/IQCmgPBnJWNaSpkrcuI0iJ5-ARVV93rnjQPimW4umDKhwx4?nav=eyJyZWZlcnJhbEluZm8iOnsicmVmZXJyYWxBcHAiOiJPbmVEcml2ZUZvckJ1c2luZXNzIiwicmVmZXJyYWxBcHBQbGF0Zm9ybSI6IldlYiIsInJlZmVycmFsTW9kZSI6InZpZXciLCJyZWZlcnJhbFZpZXciOiJNeUZpbGVzTGlua0NvcHkifX0&e=LD0zGi

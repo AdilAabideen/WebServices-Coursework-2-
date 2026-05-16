@@ -61,6 +61,73 @@ This is a high coverage figure, but the more important point is that the suite i
 structured around behavior and failure modes rather than only touching lines for
 coverage numbers.
 
+## Testing Diagram
+
+The diagram below shows how the test suite is split across the application layers.
+It is not a runtime architecture diagram. It is a testing-coverage diagram showing
+which parts of the system are validated by which style of tests.
+
+```mermaid
+flowchart TD
+    A[Application Under Test] --> B[CLI Layer<br/>main.py]
+    A --> C[Crawler Layer<br/>crawler.py]
+    A --> D[Indexing Layer<br/>indexer.py]
+    A --> E[Storage Layer<br/>storage.py]
+    A --> F[Query Layer<br/>query_parser.py + search.py]
+    A --> G[Ranking Layer<br/>ranking.py]
+    A --> H[Suggestion Layer<br/>suggest.py]
+    A --> I[Benchmark Layer<br/>benchmark.py]
+
+    J[Unit Tests] --> D
+    J --> F
+    J --> G
+    J --> H
+    J --> I
+
+    K[Integration-Style Tests] --> B
+    K --> E
+    K --> F
+    K --> G
+    K --> H
+
+    L[Crawler Tests] --> C
+    L --> F
+
+    M[Mocked Network Tests] --> C
+    N[Mocked Crawler Tests] --> B
+
+    O[Regression Tests] --> B
+    O --> C
+    O --> E
+    O --> F
+    O --> H
+
+    P[Smoke Tests] --> B
+    P --> A
+
+    Q[CI Pipeline] --> J
+    Q --> K
+    Q --> L
+    Q --> O
+    Q --> P
+    Q --> R[Lint + Type Checks<br/>ruff + mypy]
+```
+
+### How to read the diagram
+
+- `Unit Tests` target isolated logic such as tokenisation, ranking, query parsing,
+  suggestion ranking, and benchmark helpers.
+- `Integration-Style Tests` validate that multiple modules work together through
+  realistic CLI and search workflows.
+- `Crawler Tests` validate HTML parsing, politeness logic, duplicate handling, and
+  failure handling.
+- `Mocked Network Tests` simulate HTTP behavior without live web requests.
+- `Mocked Crawler Tests` simulate crawler output so CLI orchestration can be tested
+  independently of real HTTP fetching.
+- `Regression Tests` lock in fixes for previously found bugs or edge cases.
+- `Smoke Tests` provide a fast sanity check for imports and entry points.
+- `CI Pipeline` runs the automated checks on push and pull request.
+
 ## Test Strategy Split
 
 ## 1. Unit Tests

@@ -1,4 +1,7 @@
-"""Tests for the benchmark module."""
+"""Tests for the benchmark module.
+
+Test type: unit tests for benchmark helper functions and benchmark smoke support.
+"""
 
 from __future__ import annotations
 
@@ -59,6 +62,7 @@ def build_sample_index():
     )
 
 
+# Unit test for build parser uses politeness default.
 def test_build_parser_uses_politeness_default() -> None:
     args = build_parser().parse_args([])
 
@@ -66,6 +70,7 @@ def test_build_parser_uses_politeness_default() -> None:
     assert args.iterations == 250
 
 
+# Unit test for main skip crawl runs against saved index.
 def test_main_skip_crawl_runs_against_saved_index(tmp_path: Path, capsys) -> None:
     index_path = tmp_path / "index.json"
     save_index(build_sample_index(), index_path)
@@ -80,6 +85,7 @@ def test_main_skip_crawl_runs_against_saved_index(tmp_path: Path, capsys) -> Non
     assert "suggestion_latency" in captured.out
 
 
+# Unit test for benchmark crawl uses fake crawler.
 def test_benchmark_crawl_uses_fake_crawler(monkeypatch) -> None:
     pages = [
         PageContent(
@@ -110,6 +116,7 @@ def test_benchmark_crawl_uses_fake_crawler(monkeypatch) -> None:
     assert "1 pages crawled" in metric.notes
 
 
+# Unit test for benchmark build helpers return metrics.
 def test_benchmark_build_helpers_return_metrics() -> None:
     index = build_sample_index()
     documents = reconstruct_documents(index)
@@ -131,6 +138,7 @@ def test_benchmark_build_helpers_return_metrics() -> None:
     assert page_metric.value is not None and page_metric.value >= 0.0
 
 
+# Unit test for benchmark latency helpers return metrics.
 def test_benchmark_latency_helpers_return_metrics() -> None:
     index = build_sample_index()
 
@@ -146,6 +154,7 @@ def test_benchmark_latency_helpers_return_metrics() -> None:
     assert suggestion_metric.value is not None and suggestion_metric.value >= 0.0
 
 
+# Unit test for benchmark index size uses file size.
 def test_benchmark_index_size_uses_file_size(tmp_path: Path) -> None:
     index_path = tmp_path / "index.json"
     save_index(build_sample_index(), index_path)
@@ -157,6 +166,7 @@ def test_benchmark_index_size_uses_file_size(tmp_path: Path) -> None:
     assert metric.value == float(index_path.stat().st_size)
 
 
+# Unit test for reconstruct document text prefers quote metadata.
 def test_reconstruct_document_text_prefers_quote_metadata() -> None:
     metadata = {
         "quotes": [
@@ -175,6 +185,7 @@ def test_reconstruct_document_text_prefers_quote_metadata() -> None:
     assert text == "Love life Author One hope joy"
 
 
+# Unit test for reconstruct document text falls back to authors and tags.
 def test_reconstruct_document_text_falls_back_to_authors_and_tags() -> None:
     metadata = {"authors": ["Author One"], "tags": ["alpha", "beta"]}
 
@@ -183,6 +194,7 @@ def test_reconstruct_document_text_falls_back_to_authors_and_tags() -> None:
     assert text == "Author One alpha beta"
 
 
+# Unit test for reconstruct documents removes internal fields.
 def test_reconstruct_documents_removes_internal_fields() -> None:
     index = build_sample_index()
 
@@ -193,6 +205,7 @@ def test_reconstruct_documents_removes_internal_fields() -> None:
     assert "token_count" not in documents[0].metadata
 
 
+# Unit test for format helpers cover bytes and units.
 def test_format_helpers_cover_bytes_and_units() -> None:
     assert format_bytes(512) == "512 B"
     assert format_bytes(2048) == "2.00 KiB"
@@ -202,6 +215,7 @@ def test_format_helpers_cover_bytes_and_units() -> None:
     assert format_metric_value(BenchmarkMetric("crawl", 2.5, "s", "live")) == "2.500 s"
 
 
+# Unit test for measure operation returns non negative mean.
 def test_measure_operation_returns_non_negative_mean() -> None:
     elapsed = measure_operation(lambda: None, iterations=3)
 

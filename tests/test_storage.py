@@ -1,4 +1,7 @@
-"""Tests for index persistence."""
+"""Tests for index persistence.
+
+Test type: integration-style persistence tests with validation and regression coverage.
+"""
 
 from __future__ import annotations
 
@@ -32,6 +35,7 @@ def build_sample_index():
     )
 
 
+# Integration-style test for save json.
 def test_save_json(tmp_path: Path) -> None:
     path = tmp_path / "index.json"
 
@@ -41,6 +45,7 @@ def test_save_json(tmp_path: Path) -> None:
     assert '"documents"' in path.read_text(encoding="utf-8")
 
 
+# Integration-style test for load saved json.
 def test_load_saved_json(tmp_path: Path) -> None:
     path = tmp_path / "index.json"
     index = build_sample_index()
@@ -53,6 +58,7 @@ def test_load_saved_json(tmp_path: Path) -> None:
     assert loaded.terms["alpha"].postings["doc-1"].positions == [0, 2]
 
 
+# Integration-style test for loaded index equals saved index.
 def test_loaded_index_equals_saved_index(tmp_path: Path) -> None:
     path = tmp_path / "index.json"
     index = build_sample_index()
@@ -63,11 +69,13 @@ def test_loaded_index_equals_saved_index(tmp_path: Path) -> None:
     assert loaded == index
 
 
+# Integration-style test for missing file handled.
 def test_missing_file_handled(tmp_path: Path) -> None:
     with pytest.raises(IndexStorageError, match="Index file not found"):
         load_index(tmp_path / "missing.json")
 
 
+# Integration-style test for corrupt file handled.
 def test_corrupt_file_handled(tmp_path: Path) -> None:
     path = tmp_path / "index.json"
     path.write_text("{not-json", encoding="utf-8")
@@ -76,6 +84,7 @@ def test_corrupt_file_handled(tmp_path: Path) -> None:
         load_index(path)
 
 
+# Integration-style test for invalid structure handled.
 def test_invalid_structure_handled(tmp_path: Path) -> None:
     path = tmp_path / "index.json"
     path.write_text('{"documents": {}, "terms": []}', encoding="utf-8")
