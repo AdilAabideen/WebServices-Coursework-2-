@@ -1,0 +1,3 @@
+GITHUB_REPO_URL=https://github.com/AdilAabideen/WebServices-Coursework-2-
+
+VIDEO_URL= https://1drv.ms/v/c/7530c324ada870f0/IQATAF2PYJxtR4bIXkaHRWq1AZGvDG_rqWvCRscAsAMlwg0?e=VggEvD

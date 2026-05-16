@@ -1,4 +1,7 @@
-"""Tests for print and find CLI commands."""
+"""Tests for print and find CLI commands.
+
+Test type: integration-style search tests covering query execution, snippets, filters, and regressions.
+"""
 
 from __future__ import annotations
 
@@ -107,6 +110,7 @@ def build_search_index(path: Path) -> None:
     save_index(index, path)
 
 
+# Integration-style test for print existing word.
 def test_print_existing_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -121,6 +125,7 @@ def test_print_existing_word(tmp_path: Path, capsys) -> None:
     assert "doc-2" in captured.out
 
 
+# Integration-style test for print missing word.
 def test_print_missing_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -132,6 +137,7 @@ def test_print_missing_word(tmp_path: Path, capsys) -> None:
     assert 'No postings found for "nonsense".' in captured.out
 
 
+# Integration-style test for print uppercase word normalizes case.
 def test_print_uppercase_word_normalizes_case(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -143,6 +149,7 @@ def test_print_uppercase_word_normalizes_case(tmp_path: Path, capsys) -> None:
     assert 'Term: "good"' in captured.out
 
 
+# Integration-style test for print punctuation only word is handled.
 def test_print_punctuation_only_word_is_handled(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -154,6 +161,7 @@ def test_print_punctuation_only_word_is_handled(tmp_path: Path, capsys) -> None:
     assert "Please provide a non-empty word to print." in captured.err
 
 
+# Integration-style test for print missing index file.
 def test_print_missing_index_file(tmp_path: Path, capsys) -> None:
     path = tmp_path / "missing.json"
 
@@ -164,6 +172,7 @@ def test_print_missing_index_file(tmp_path: Path, capsys) -> None:
     assert "Index file not found" in captured.err
 
 
+# Integration-style test for print corrupt index file.
 def test_print_corrupt_index_file(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     path.write_text("{bad-json", encoding="utf-8")
@@ -175,6 +184,7 @@ def test_print_corrupt_index_file(tmp_path: Path, capsys) -> None:
     assert "Index file is corrupt" in captured.err
 
 
+# Integration-style test for find single word.
 def test_find_single_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -189,6 +199,7 @@ def test_find_single_word(tmp_path: Path, capsys) -> None:
     assert "https://quotes.toscrape.com/page/5/" not in captured.out
 
 
+# Integration-style test for find multi word query.
 def test_find_multi_word_query(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -205,6 +216,7 @@ def test_find_multi_word_query(tmp_path: Path, capsys) -> None:
     assert "https://quotes.toscrape.com/page/8/" not in captured.out
 
 
+# Integration-style test for find exact phrase query uses adjacent positions.
 def test_find_exact_phrase_query_uses_adjacent_positions(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -221,6 +233,7 @@ def test_find_exact_phrase_query_uses_adjacent_positions(tmp_path: Path, capsys)
     assert "https://quotes.toscrape.com/page/9/" not in captured.out
 
 
+# Integration-style test for phrase query rejects non adjacent terms.
 def test_phrase_query_rejects_non_adjacent_terms() -> None:
     index = build_inverted_index(
         [
@@ -234,6 +247,7 @@ def test_phrase_query_rejects_non_adjacent_terms() -> None:
     assert matches == ["doc-1"]
 
 
+# Integration-style test for find matching documents handles empty and missing terms.
 def test_find_matching_documents_handles_empty_and_missing_terms() -> None:
     index = build_inverted_index([Document(document_id="doc-1", text="good friends")])
 
@@ -241,6 +255,7 @@ def test_find_matching_documents_handles_empty_and_missing_terms() -> None:
     assert find_matching_documents(index, "missing") == []
 
 
+# Integration-style test for find matching documents returns and matches.
 def test_find_matching_documents_returns_and_matches() -> None:
     index = build_inverted_index(
         [
@@ -252,6 +267,7 @@ def test_find_matching_documents_returns_and_matches() -> None:
     assert find_matching_documents(index, "good friends") == ["doc-1"]
 
 
+# Integration-style test for execute query handles no positive clauses.
 def test_execute_query_handles_no_positive_clauses() -> None:
     index = build_inverted_index([Document(document_id="doc-1", text="good friends")])
     empty_query = ParsedQuery(
@@ -266,6 +282,7 @@ def test_execute_query_handles_no_positive_clauses() -> None:
     assert execute_query(index, empty_query) == []
 
 
+# Integration-style test for find or query returns union of results.
 def test_find_or_query_returns_union_of_results(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -280,6 +297,7 @@ def test_find_or_query_returns_union_of_results(tmp_path: Path, capsys) -> None:
     assert "https://quotes.toscrape.com/page/8/" in captured.out
 
 
+# Integration-style test for find exclusion query removes matching pages.
 def test_find_exclusion_query_removes_matching_pages(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -293,6 +311,7 @@ def test_find_exclusion_query_removes_matching_pages(tmp_path: Path, capsys) -> 
     assert "https://quotes.toscrape.com/page/2/" not in captured.out
 
 
+# Integration-style test for find author filter uses document metadata.
 def test_find_author_filter_uses_document_metadata(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -309,6 +328,7 @@ def test_find_author_filter_uses_document_metadata(tmp_path: Path, capsys) -> No
     assert "https://quotes.toscrape.com/page/2/" not in captured.out
 
 
+# Integration-style test for find tag filter uses document metadata.
 def test_find_tag_filter_uses_document_metadata(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -323,6 +343,7 @@ def test_find_tag_filter_uses_document_metadata(tmp_path: Path, capsys) -> None:
     assert "score=N/A" in captured.out
 
 
+# Integration-style test for find uppercase query is case insensitive.
 def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -335,6 +356,7 @@ def test_find_uppercase_query_is_case_insensitive(tmp_path: Path, capsys) -> Non
     assert "https://quotes.toscrape.com/page/2/" in captured.out
 
 
+# Integration-style test for find single term results are ranked.
 def test_find_single_term_results_are_ranked(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -349,6 +371,7 @@ def test_find_single_term_results_are_ranked(tmp_path: Path, capsys) -> None:
     )
 
 
+# Integration-style test for find love still returns results.
 def test_find_love_still_returns_results(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -361,6 +384,7 @@ def test_find_love_still_returns_results(tmp_path: Path, capsys) -> None:
     assert "https://quotes.toscrape.com/page/2/" in captured.out
 
 
+# Integration-style test for find missing quote metadata does not crash output.
 def test_find_missing_quote_metadata_does_not_crash_output(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     index = build_inverted_index(
@@ -382,6 +406,7 @@ def test_find_missing_quote_metadata_does_not_crash_output(tmp_path: Path, capsy
     assert "score=" in captured.out
 
 
+# Integration-style test for find matching quotes skips malformed payloads and returns partial matches.
 def test_find_matching_quotes_skips_malformed_payloads_and_returns_partial_matches() -> None:
     metadata = {
         "quotes": [
@@ -404,6 +429,7 @@ def test_find_matching_quotes_skips_malformed_payloads_and_returns_partial_match
     )
 
 
+# Integration-style test for find matching quotes handles invalid quote structure.
 def test_find_matching_quotes_handles_invalid_quote_structure() -> None:
     metadata = {"quotes": [{"text": "Love", "author": "Author One"}]}
 
@@ -412,6 +438,7 @@ def test_find_matching_quotes_handles_invalid_quote_structure() -> None:
     assert matches == []
 
 
+# Integration-style test for find missing word.
 def test_find_missing_word(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -423,6 +450,7 @@ def test_find_missing_word(tmp_path: Path, capsys) -> None:
     assert 'No results found for query: "missing".' in captured.out
 
 
+# Integration-style test for find missing word shows suggestion when available.
 def test_find_missing_word_shows_suggestion_when_available(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -435,18 +463,21 @@ def test_find_missing_word_shows_suggestion_when_available(tmp_path: Path, capsy
     assert 'Did you mean: "friends"?' in captured.out
 
 
+# Integration-style test for highlight terms single term.
 def test_highlight_terms_single_term() -> None:
     highlighted = highlight_terms("Love is beautiful", ["love"], use_colour=False)
 
     assert "[Love]" in highlighted
 
 
+# Integration-style test for highlight terms is case insensitive.
 def test_highlight_terms_is_case_insensitive() -> None:
     highlighted = highlight_terms("Good friends", ["good"], use_colour=False)
 
     assert "[Good]" in highlighted
 
 
+# Integration-style test for highlight terms multi word.
 def test_highlight_terms_multi_word() -> None:
     highlighted = highlight_terms(
         "Good friends are good",
@@ -458,6 +489,7 @@ def test_highlight_terms_multi_word() -> None:
     assert "[friends]" in highlighted
 
 
+# Integration-style test for boolean operator is not highlighted.
 def test_boolean_operator_is_not_highlighted() -> None:
     query = parse_query("good OR friends")
     highlighted = highlight_terms(
@@ -471,6 +503,7 @@ def test_boolean_operator_is_not_highlighted() -> None:
     assert "[OR]" not in highlighted
 
 
+# Integration-style test for exclusion term is not highlighted.
 def test_exclusion_term_is_not_highlighted() -> None:
     query = parse_query("good -friends")
     highlighted = highlight_terms(
@@ -483,6 +516,7 @@ def test_exclusion_term_is_not_highlighted() -> None:
     assert "[friends]" not in highlighted
 
 
+# Integration-style test for metadata filter terms are not highlighted.
 def test_metadata_filter_terms_are_not_highlighted() -> None:
     query = parse_query("author:einstein")
     highlighted = highlight_terms(
@@ -494,6 +528,7 @@ def test_metadata_filter_terms_are_not_highlighted() -> None:
     assert highlighted == "Albert Einstein wrote about life"
 
 
+# Integration-style test for phrase query prefers phrase highlighting.
 def test_phrase_query_prefers_phrase_highlighting() -> None:
     query = parse_query('"good friends"')
     highlighted = highlight_terms(
@@ -505,6 +540,7 @@ def test_phrase_query_prefers_phrase_highlighting() -> None:
     assert "[Good friends]" in highlighted
 
 
+# Integration-style test for find empty query.
 def test_find_empty_query(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -516,6 +552,7 @@ def test_find_empty_query(tmp_path: Path, capsys) -> None:
     assert "Please provide a non-empty query." in captured.err
 
 
+# Integration-style test for find punctuation only query.
 def test_find_punctuation_only_query(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -527,6 +564,7 @@ def test_find_punctuation_only_query(tmp_path: Path, capsys) -> None:
     assert "Query term must contain at least one searchable character." in captured.err
 
 
+# Integration-style test for find invalid or syntax is handled gracefully.
 def test_find_invalid_or_syntax_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -538,6 +576,7 @@ def test_find_invalid_or_syntax_is_handled_gracefully(tmp_path: Path, capsys) ->
     assert "OR must appear between valid query clauses." in captured.err
 
 
+# Integration-style test for find unmatched quote is handled gracefully.
 def test_find_unmatched_quote_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -549,6 +588,7 @@ def test_find_unmatched_quote_is_handled_gracefully(tmp_path: Path, capsys) -> N
     assert "unmatched quote" in captured.err
 
 
+# Integration-style test for find leading or is handled gracefully.
 def test_find_leading_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -560,6 +600,7 @@ def test_find_leading_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     assert "OR must appear between valid query clauses." in captured.err
 
 
+# Integration-style test for find empty author filter is handled gracefully.
 def test_find_empty_author_filter_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -571,6 +612,7 @@ def test_find_empty_author_filter_is_handled_gracefully(tmp_path: Path, capsys) 
     assert "Author filter must include a value." in captured.err
 
 
+# Integration-style test for find empty tag filter is handled gracefully.
 def test_find_empty_tag_filter_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -582,6 +624,7 @@ def test_find_empty_tag_filter_is_handled_gracefully(tmp_path: Path, capsys) -> 
     assert "Tag filter must include a value." in captured.err
 
 
+# Integration-style test for find trailing or is handled gracefully.
 def test_find_trailing_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -593,6 +636,7 @@ def test_find_trailing_or_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     assert "OR must appear between valid query clauses." in captured.err
 
 
+# Integration-style test for find exclusion only is handled gracefully.
 def test_find_exclusion_only_is_handled_gracefully(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     build_search_index(path)
@@ -604,6 +648,7 @@ def test_find_exclusion_only_is_handled_gracefully(tmp_path: Path, capsys) -> No
     assert "Please provide at least one searchable term or filter." in captured.err
 
 
+# Integration-style test for find long snippets are truncated in output.
 def test_find_long_snippets_are_truncated_in_output(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     long_quote = (
@@ -642,6 +687,7 @@ def test_find_long_snippets_are_truncated_in_output(tmp_path: Path, capsys) -> N
     assert long_quote not in captured.out
 
 
+# Integration-style test for find missing index file.
 def test_find_missing_index_file(tmp_path: Path, capsys) -> None:
     path = tmp_path / "missing.json"
 
@@ -652,6 +698,7 @@ def test_find_missing_index_file(tmp_path: Path, capsys) -> None:
     assert "Index file not found" in captured.err
 
 
+# Integration-style test for find corrupt index file.
 def test_find_corrupt_index_file(tmp_path: Path, capsys) -> None:
     path = tmp_path / "index.json"
     path.write_text("{bad-json", encoding="utf-8")

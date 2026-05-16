@@ -1,4 +1,7 @@
-"""Tests for tokenisation and inverted index construction."""
+"""Tests for tokenisation and inverted index construction.
+
+Test type: unit tests for tokenisation, positional indexing, and metadata conversion.
+"""
 
 from __future__ import annotations
 
@@ -6,18 +9,21 @@ from src.indexer import Document, build_inverted_index, page_to_document, tokeni
 from src.models import PageContent, Quote
 
 
+# Unit test for case insensitive tokenisation.
 def test_case_insensitive_tokenisation() -> None:
     tokens = tokenize("Hello hello HELLO")
 
     assert tokens == ["hello", "hello", "hello"]
 
 
+# Unit test for punctuation handling.
 def test_punctuation_handling() -> None:
     tokens = tokenize("Hello, world! End-to-end.")
 
     assert tokens == ["hello", "world", "end", "to", "end"]
 
 
+# Unit test for correct word frequency.
 def test_correct_word_frequency() -> None:
     index = build_inverted_index(
         [Document(document_id="doc-1", text="alpha beta alpha")]
@@ -27,6 +33,7 @@ def test_correct_word_frequency() -> None:
     assert index.terms["alpha"].total_frequency == 2
 
 
+# Unit test for correct word positions.
 def test_correct_word_positions() -> None:
     index = build_inverted_index(
         [Document(document_id="doc-1", text="alpha beta alpha gamma")]
@@ -35,6 +42,7 @@ def test_correct_word_positions() -> None:
     assert index.terms["alpha"].postings["doc-1"].positions == [0, 2]
 
 
+# Unit test for correct document frequency.
 def test_correct_document_frequency() -> None:
     index = build_inverted_index(
         [
@@ -47,6 +55,7 @@ def test_correct_document_frequency() -> None:
     assert index.terms["beta"].document_frequency == 1
 
 
+# Unit test for empty text handling.
 def test_empty_text_handling() -> None:
     index = build_inverted_index(
         [Document(document_id="doc-1", text="", metadata={"url": "empty"})]
@@ -57,6 +66,7 @@ def test_empty_text_handling() -> None:
     assert index.documents["doc-1"]["token_count"] == 0
 
 
+# Unit test for page to document preserves quote metadata.
 def test_page_to_document_preserves_quote_metadata() -> None:
     page = PageContent(
         url="https://quotes.toscrape.com/page/2/",

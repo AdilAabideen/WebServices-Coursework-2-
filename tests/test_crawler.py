@@ -1,4 +1,7 @@
-"""Tests for the polite crawler."""
+"""Tests for the polite crawler.
+
+Test type: crawler-focused unit tests with mocked network behavior and regression coverage.
+"""
 
 from __future__ import annotations
 
@@ -81,6 +84,7 @@ class MockSession:
         return response
 
 
+# Crawler unit test for extract next page link.
 def test_extract_next_page_link() -> None:
     crawler = Crawler()
     page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
@@ -88,6 +92,7 @@ def test_extract_next_page_link() -> None:
     assert page.next_page == "https://quotes.toscrape.com/page/2/"
 
 
+# Crawler unit test for extract quote text.
 def test_extract_quote_text() -> None:
     crawler = Crawler()
     page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
@@ -95,6 +100,7 @@ def test_extract_quote_text() -> None:
     assert page.quotes[-1].text == "“A day without sunshine is like, you know, night.”"
 
 
+# Crawler unit test for extract authors.
 def test_extract_authors() -> None:
     crawler = Crawler()
     page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
@@ -103,6 +109,7 @@ def test_extract_authors() -> None:
     assert page.quotes[-1].author == "Steve Martin"
 
 
+# Crawler unit test for extract tags.
 def test_extract_tags() -> None:
     crawler = Crawler()
     page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
@@ -110,6 +117,7 @@ def test_extract_tags() -> None:
     assert page.quotes[6].tags == ["life", "love"]
 
 
+# Crawler unit test for parse actual page extracts all quotes.
 def test_parse_actual_page_extracts_all_quotes() -> None:
     crawler = Crawler()
     page = crawler.parse_page("https://quotes.toscrape.com/", ACTUAL_PAGE_HTML)
@@ -117,6 +125,7 @@ def test_parse_actual_page_extracts_all_quotes() -> None:
     assert len(page.quotes) == 10
 
 
+# Crawler unit test for avoid duplicate urls.
 def test_avoid_duplicate_urls() -> None:
     session = MockSession(
         {
@@ -138,6 +147,7 @@ def test_avoid_duplicate_urls() -> None:
     ]
 
 
+# Crawler unit test for crawl can stop after max pages.
 def test_crawl_can_stop_after_max_pages() -> None:
     session = MockSession(
         {
@@ -153,6 +163,7 @@ def test_crawl_can_stop_after_max_pages() -> None:
     assert session.requested_urls == ["https://quotes.toscrape.com/"]
 
 
+# Crawler unit test for handle failed request.
 def test_handle_failed_request() -> None:
     session = MockSession(
         {
@@ -167,6 +178,7 @@ def test_handle_failed_request() -> None:
     assert crawler.visited_urls == {"https://quotes.toscrape.com/"}
 
 
+# Crawler unit test for handle timeout request.
 def test_handle_timeout_request() -> None:
     session = MockSession(
         {
@@ -181,6 +193,7 @@ def test_handle_timeout_request() -> None:
     assert crawler.visited_urls == {"https://quotes.toscrape.com/"}
 
 
+# Crawler unit test for delay function is called between requests.
 def test_delay_function_is_called_between_requests() -> None:
     sleep_calls: list[float] = []
     time_values = iter([100.0, 102.0, 106.0])
@@ -202,6 +215,7 @@ def test_delay_function_is_called_between_requests() -> None:
     assert sleep_calls == [4.0]
 
 
+# Crawler unit test for crawler constructor validates inputs.
 def test_crawler_constructor_validates_inputs() -> None:
     try:
         Crawler(start_url="")
@@ -225,6 +239,7 @@ def test_crawler_constructor_validates_inputs() -> None:
         raise AssertionError("Expected CrawlError for invalid timeout")
 
 
+# Crawler unit test for crawl rejects negative max pages.
 def test_crawl_rejects_negative_max_pages() -> None:
     crawler = Crawler()
 
@@ -236,6 +251,7 @@ def test_crawl_rejects_negative_max_pages() -> None:
         raise AssertionError("Expected CrawlError for negative max_pages")
 
 
+# Crawler unit test for normalize url rejects empty string.
 def test_normalize_url_rejects_empty_string() -> None:
     crawler = Crawler()
 
@@ -247,6 +263,7 @@ def test_normalize_url_rejects_empty_string() -> None:
         raise AssertionError("Expected CrawlError for empty URL")
 
 
+# Crawler unit test for extract next page link handles missing href.
 def test_extract_next_page_link_handles_missing_href() -> None:
     crawler = Crawler()
     soup = BeautifulSoup('<li class="next"><a>Next</a></li>', "html.parser")
@@ -254,6 +271,7 @@ def test_extract_next_page_link_handles_missing_href() -> None:
     assert crawler.extract_next_page_link(soup, base_url="https://quotes.toscrape.com/") is None
 
 
+# Crawler unit test for extract quote text handles missing and nested text node.
 def test_extract_quote_text_handles_missing_and_nested_text_node() -> None:
     crawler = Crawler()
     assert crawler._extract_quote_text(None) == ""
